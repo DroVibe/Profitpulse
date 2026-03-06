@@ -195,6 +195,7 @@ def init_state() -> None:
     defaults: dict = {
         "authenticated":   False,
         "username":        "",
+        "user_tier":       "free",  # free, pro, demo
         "df_sales":        pd.DataFrame(),
         "df_purchases":    pd.DataFrame(),
         "df_expenses":     pd.DataFrame(),
@@ -265,6 +266,8 @@ CHART_LAYOUT = dict(
 # AUTH
 # ────────────────────────────────────────────────
 def login_page() -> None:
+    import users  # User management module
+    
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown("""
@@ -276,25 +279,71 @@ def login_page() -> None:
             </p>
         </div>
         """, unsafe_allow_html=True)
-        with st.form("login_form"):
-            user = st.text_input("Username", placeholder="admin")
-            pw   = st.text_input("Password", type="password", placeholder="••••••••")
-            st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-            submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
-            if submitted:
-                valid_user = os.getenv("APP_USER", DEMO_USER)
-                valid_pass = os.getenv("APP_PASS", DEMO_PASS)
-                if user == valid_user and pw == valid_pass:
-                    st.session_state.authenticated = True
-                    st.session_state.username       = user
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials. Try admin / pilot2026.")
-        st.markdown(
-            "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
-            "Demo: admin / pilot2026</p>",
-            unsafe_allow_html=True,
-        )
+        
+        # Toggle between Login and Signup
+        if "show_signup" not in st.session_state:
+            st.session_state.show_signup = False
+        
+        tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
+        
+        with tab_login:
+            with st.form("login_form"):
+                user = st.text_input("Username", placeholder="admin")
+                pw   = st.text_input("Password", type="password", placeholder="••••••••")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
+                if submitted:
+                    # First check demo credentials
+                    valid_user = os.getenv("APP_USER", DEMO_USER)
+                    valid_pass = os.getenv("APP_PASS", DEMO_PASS)
+                    if user == valid_user and pw == valid_pass:
+                        st.session_state.authenticated = True
+                        st.session_state.username = user
+                        st.session_state.user_tier = "demo"
+                        st.rerun()
+                    # Then check database users
+                    success, user_data = users.verify_user(user, pw)
+                    if success:
+                        st.session_state.authenticated = True
+                        st.session_state.username = user
+                        st.session_state.user_tier = user_data["tier"]
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials.")
+            st.markdown(
+                "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
+                "Demo: admin / pilot2026</p>",
+                unsafe_allow_html=True,
+            )
+        
+        with tab_signup:
+            with st.form("signup_form"):
+                new_user = st.text_input("Username", placeholder="Choose a username")
+                new_email = st.text_input("Email", placeholder="your@email.com")
+                new_pw = st.text_input("Password", type="password", placeholder="Create password")
+                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
+                if signup_submit:
+                    if not new_user or not new_email or not new_pw:
+                        st.error("Please fill in all fields.")
+                    elif new_pw != confirm_pw:
+                        st.error("Passwords do not match.")
+                    elif len(new_pw) < 6:
+                        st.error("Password must be at least 6 characters.")
+                    else:
+                        success, msg = users.create_user(new_user, new_email, new_pw)
+                        if success:
+                            st.success(msg + " Please sign in.")
+                            st.session_state.show_signup = False
+                            st.rerun()
+                        else:
+                            st.error(msg)
+            st.markdown(
+                "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
+                "Free tier: 10 AI queries/day · Pro: Unlimited</p>",
+                unsafe_allow_html=True,
+            )
 
 
 def logout() -> None:
