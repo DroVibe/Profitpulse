@@ -307,6 +307,16 @@ def login_page() -> None:
                         st.session_state.authenticated = True
                         st.session_state.username = user
                         st.session_state.user_tier = user_data["tier"]
+                        # Load user's saved data from database
+                        st.session_state.df_sales = users.load_user_data(user, "sales")
+                        st.session_state.df_purchases = users.load_user_data(user, "purchases")
+                        st.session_state.df_expenses = users.load_user_data(user, "expenses")
+                        st.session_state.df_labor = users.load_user_data(user, "labor")
+                        # Load user's business type
+                        biz_type = users.load_user_setting(user, "business_type")
+                        if biz_type:
+                            st.session_state.business_type = biz_type
+                            st.session_state.onboarded = True
                         st.rerun()
                     else:
                         st.error("Invalid credentials.")
@@ -683,6 +693,23 @@ RULES:
 11. Close EVERY response with exactly ONE bolded line: ⚡ Quick Win This Week: <action>"""
 
 
+def save_all_user_data():
+    """Save all user data to database."""
+    import users as user_db
+    username = st.session_state.get("username", "")
+    if not username or username == "admin":
+        return  # Don't save demo data
+    
+    user_db.save_user_data(username, "sales", st.session_state.df_sales)
+    user_db.save_user_data(username, "purchases", st.session_state.df_purchases)
+    user_db.save_user_data(username, "expenses", st.session_state.df_expenses)
+    user_db.save_user_data(username, "labor", st.session_state.df_labor)
+    
+    # Save business type
+    if st.session_state.get("business_type"):
+        user_db.save_user_setting(username, "business_type", st.session_state.business_type)
+
+
 def call_ai(user_query: str) -> str:
     """Call Venice AI with full P&L context. Returns response string."""
     if not API_KEY:
@@ -803,6 +830,7 @@ def onboarding_wizard() -> None:
                     st.session_state.df_purchases = demo["purchases"]
                     st.session_state.df_expenses  = demo["expenses"]
                     st.session_state.df_labor     = demo["labor"]
+                    save_all_user_data()
                 st.session_state.onboarded        = True
                 st.session_state.onboarding_step  = None
                 st.toast("Demo data loaded — welcome to ProfitPulse! 🎉", icon="✅")
@@ -847,6 +875,7 @@ def page_data_input() -> None:
                 st.session_state.df_purchases = demo["purchases"]
                 st.session_state.df_expenses  = demo["expenses"]
                 st.session_state.df_labor     = demo["labor"]
+                save_all_user_data()
             st.toast("Demo data loaded!", icon="✅")
             st.rerun()
 
@@ -872,6 +901,7 @@ def page_data_input() -> None:
                 parsed = parse_csv(f, required_cols, label)
                 if not parsed.empty:
                     st.session_state[state_key] = parsed
+                    save_all_user_data()
                     st.toast(f"{label}: {len(parsed):,} rows loaded", icon="📂")
 
     st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
@@ -898,6 +928,7 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
+                    save_all_user_data()
                     st.toast("Sale added ✓", icon="✅")
 
     with tab_p:
@@ -916,6 +947,7 @@ def page_data_input() -> None:
                                          "amount": p_amt, "description": p_desc}])
                     st.session_state.df_purchases = pd.concat(
                         [st.session_state.df_purchases, row], ignore_index=True)
+                    save_all_user_data()
                     st.toast("Purchase added ✓", icon="✅")
 
     with tab_e:
@@ -931,6 +963,7 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
+                save_all_user_data()
                 st.toast("Expense added ✓", icon="✅")
 
     with tab_l:
@@ -952,6 +985,7 @@ def page_data_input() -> None:
                                          "hours": l_hrs, "rate": l_rate, "description": l_desc}])
                     st.session_state.df_labor = pd.concat(
                         [st.session_state.df_labor, row], ignore_index=True)
+                    save_all_user_data()
                     st.toast("Shift added ✓", icon="✅")
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
@@ -1591,6 +1625,14 @@ def render_sidebar() -> str:
         if st.button("🗑 Clear all data", use_container_width=True):
             for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
                 st.session_state[key] = pd.DataFrame()
+            # Clear from database for non-demo users
+            username = st.session_state.get("username", "")
+            if username and username != "admin":
+                import users as user_db
+                user_db.save_user_data(username, "sales", pd.DataFrame())
+                user_db.save_user_data(username, "purchases", pd.DataFrame())
+                user_db.save_user_data(username, "expenses", pd.DataFrame())
+                user_db.save_user_data(username, "labor", pd.DataFrame())
             st.session_state.chat_history    = []
             st.session_state.pnl_cache       = {}
             st.session_state.last_calculated = None
