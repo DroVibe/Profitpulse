@@ -11,6 +11,8 @@ AI-powered business analytics dashboard built with Streamlit + Venice AI.
 - 🔮 **What-If Simulator** — Model business scenarios
 - 📤 **Export** — Download data as CSV or professional PDF
 - 📈 **Interactive Charts** — Revenue trends, category breakdown, labor costs
+- 📱 **Mobile Friendly** — Fluid iPhone/slider support
+- 🌓 **Dark/Light Mode** — Toggle in sidebar, respects system preference
 
 ## Quick Start
 
@@ -37,13 +39,15 @@ streamlit run profitpulse.py
 
 ## Environment Variables
 
-Create a `.env` file:
+Create a `.env` file, or set `VENICE_API_KEY` in your environment:
 
 ```env
 VENICE_API_KEY=your_venice_api_key_here
 APP_USER=admin
 APP_PASS=pilot2026
 ```
+
+The app will first check `os.environ` (works with Streamlit Cloud secrets), then fall back to `.env` file.
 
 ## Demo Credentials
 
