@@ -21,12 +21,26 @@ from fpdf import FPDF
 # CONFIGURATION
 # ────────────────────────────────────────────────
 APP_NAME  = "ProfitPulse"
-# First check env vars (from OpenClaw), then fall back to .env
-API_KEY   = os.environ.get("VENICE_API_KEY") or os.getenv("VENICE_API_KEY", "")
-BASE_URL  = "https://api.venice.ai/api/v1"
-MODEL     = "llama-3.3-70b"
+# Placeholder - will be set after st is imported
+API_KEY  = None
+BASE_URL = "https://api.venice.ai/api/v1"
+MODEL    = "llama-3.3-70b"
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
+
+
+def get_api_key():
+    """Get API key from environment, .env, or Streamlit Cloud secrets"""
+    # Priority: os.environ -> .env -> st.secrets
+    key = os.environ.get("VENICE_API_KEY") or os.getenv("VENICE_API_KEY", "")
+    if not key:
+        try:
+            import streamlit as st
+            if hasattr(st, "secrets"):
+                key = st.secrets.get("VENICE_API_KEY", "")
+        except:
+            pass
+    return key
 
 BENCHMARKS = {
     "gross_margin_pct":         45.0,
@@ -865,11 +879,12 @@ def save_all_user_data():
 
 def call_ai(user_query: str) -> str:
     """Call Venice AI with full P&L context. Returns response string."""
-    if not API_KEY:
+    api_key = get_api_key()
+    if not api_key:
         pnl = st.session_state.pnl_cache
         return (
             "**⚠ Venice API key not configured.**\n\n"
-            "Add `VENICE_API_KEY=your_key` to your `.env` file to enable AI advice.\n\n"
+            "Add `VENICE_API_KEY=your_key` to your `.env` file or Streamlit Cloud secrets to enable AI advice.\n\n"
             "**Snapshot from your data:**\n"
             f"- Gross margin: **{pnl.get('gross_margin_pct','N/A')}%** "
             f"(target ≥ {BENCHMARKS['gross_margin_pct']}%)\n"
@@ -890,7 +905,7 @@ def call_ai(user_query: str) -> str:
     messages.append({"role": "user", "content": user_query})
 
     try:
-        client   = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+        client   = OpenAI(api_key=api_key, base_url=BASE_URL)
         response = client.chat.completions.create(
             model=MODEL, messages=messages, max_tokens=800, temperature=0.4,
         )
@@ -1383,10 +1398,10 @@ def page_ai_chat() -> None:
     if not st.session_state.pnl_cache:
         calculate_pnl()
 
-    if API_KEY:
+    if get_api_key():
         st.caption("✓ Venice AI connected")
     else:
-        st.caption("⚠ No API key — add VENICE_API_KEY to your .env file")
+        st.caption("⚠ No API key — add VENICE_API_KEY to your .env file or Streamlit Cloud secrets")
 
     # ── Quick-query buttons ──────────────────────
     quick_queries = [
