@@ -1,6 +1,7 @@
 # ============================================================
 # ProfitPulse — AI-Powered Business Analytics Dashboard
 # Polished & Production-Ready | February 2026
+# Updated: March 2026 - Mobile improvements, Dark/Light mode, Venice key fix
 # ============================================================
 from dotenv import load_dotenv
 import os
@@ -20,7 +21,8 @@ from fpdf import FPDF
 # CONFIGURATION
 # ────────────────────────────────────────────────
 APP_NAME  = "ProfitPulse"
-API_KEY   = os.getenv("VENICE_API_KEY", "")
+# First check env vars (from OpenClaw), then fall back to .env
+API_KEY   = os.environ.get("VENICE_API_KEY") or os.getenv("VENICE_API_KEY", "")
 BASE_URL  = "https://api.venice.ai/api/v1"
 MODEL     = "llama-3.3-70b"
 DEMO_USER = "admin"
@@ -60,6 +62,7 @@ st.set_page_config(
 #      .premium-card/.tier-card, breaking dark-mode premium page.
 # ADDED: dark-mode alert colours, button radius, input focus ring,
 #        scrollbar, mobile padding tweak, card hover polish.
+# March 2026: Mobile touch optimizations, Light mode support, Theme toggle
 # ────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -82,6 +85,26 @@ st.markdown("""
   section[data-testid="stSidebar"] .stMarkdown h3,
   section[data-testid="stSidebar"] .stMarkdown span,
   section[data-testid="stSidebar"] label { color: #e0e0e0 !important; }
+
+  /* Theme Toggle Button */
+  .theme-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 20px;
+    padding: 6px 14px;
+    color: #a5b4fc;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .theme-toggle:hover {
+    background: rgba(99, 102, 241, 0.35);
+    color: #fff;
+  }
 
   .pp-card {
     backdrop-filter: blur(12px);
@@ -176,9 +199,94 @@ st.markdown("""
     outline-offset: 1px !important;
   }
 
+  /* Mobile Touch Optimizations */
   @media (max-width: 768px) {
     .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
     .pp-card .value  { font-size: 1.35rem; }
+    
+    /* Smooth slider interaction on mobile */
+    input[type="range"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: pan-x;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #6366f1;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      margin-top: -8px;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    }
+    input[type="range"]:focus::-webkit-slider-thumb {
+      box-shadow: 0 0 0 4px rgba(99,102,241,0.3);
+    }
+    
+    /* Better touch targets */
+    .stButton > button {
+      min-height: 48px;
+      padding: 12px 20px;
+    }
+    
+    /* Fluid sidebar */
+    section[data-testid="stSidebar"] {
+      width: 85vw !important;
+    }
+  }
+
+  /* Light Mode Styles */
+  .light-mode {
+    background: #ffffff !important;
+    color: #1e293b !important;
+  }
+  .light-mode .block-container {
+    background: #ffffff;
+  }
+  .light-mode .pp-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+    color: #1e293b !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+  }
+  .light-mode .pp-card .label {
+    color: #475569 !important;
+    opacity: 1 !important;
+  }
+  .light-mode .pp-card .value {
+    color: #0f172a !important;
+  }
+  .light-mode .pp-card .sub {
+    color: #64748b !important;
+  }
+  .light-mode h1, .light-mode h2, .light-mode h3 {
+    color: #0f172a !important;
+  }
+  .light-mode .page-header {
+    color: #0f172a !important;
+  }
+  .light-mode .page-sub {
+    color: #64748b !important;
+  }
+  .light-mode .pnl-row {
+    border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+    color: #334155 !important;
+  }
+  .light-mode .stMarkdown p {
+    color: #334155 !important;
+  }
+  .light-mode section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  }
+  .light-mode section[data-testid="stSidebar"] .stMarkdown p,
+  .light-mode section[data-testid="stSidebar"] .stMarkdown h3,
+  .light-mode section[data-testid="stSidebar"] .stMarkdown span,
+  .light-mode section[data-testid="stSidebar"] label {
+    color: #334155 !important;
   }
 
   #MainMenu { visibility: hidden; }
@@ -186,6 +294,50 @@ st.markdown("""
   header[data-testid="stHeader"] { background: transparent; }
 </style>
 """, unsafe_allow_html=True)
+
+# ────────────────────────────────────────────────
+# THEME TOGGLE FUNCTIONALITY
+# ────────────────────────────────────────────────
+def render_theme_toggle():
+    """Render theme toggle button and apply theme"""
+    # Get current theme
+    theme = st.session_state.get("theme", "system")
+    
+    # Theme options
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        theme_options = ["🌙 Dark", "☀️ Light", "⚙️ System"]
+        theme_icons = {"dark": "🌙", "light": "☀️", "system": "⚙️"}
+        current_idx = 0 if theme == "dark" else 1 if theme == "light" else 2
+        
+        selected = st.selectbox(
+            "Theme",
+            options=theme_options,
+            index=current_idx,
+            key="theme_select",
+            label_visibility="collapsed"
+        )
+        
+        # Update theme in session state
+        new_theme = selected.split()[0].lower()
+        if new_theme != theme:
+            st.session_state.theme = new_theme
+            st.rerun()
+
+# Apply theme class to body
+def apply_theme():
+    """Apply theme CSS class based on user preference"""
+    theme = st.session_state.get("theme", "system")
+    
+    if theme == "light":
+        st.markdown("""<script>
+            document.body.classList.add('light-mode');
+        </script>""", unsafe_allow_html=True)
+    elif theme == "dark":
+        st.markdown("""<script>
+            document.body.classList.remove('light-mode');
+        </script>""", unsafe_allow_html=True)
+    # System theme - no explicit class, uses media query
 
 
 # ────────────────────────────────────────────────
@@ -206,6 +358,7 @@ def init_state() -> None:
         "onboarded":       False,
         "onboarding_step": 0,
         "last_calculated": None,   # timestamp shown on dashboard
+        "theme":           "system",  # dark, light, or system
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1652,9 +1805,15 @@ def render_sidebar() -> str:
 # MAIN ROUTER
 # ────────────────────────────────────────────────
 def main() -> None:
+    # Apply theme early
+    apply_theme()
+    
     if not st.session_state.authenticated:
         login_page()
         return
+    
+    # Render theme toggle in sidebar
+    render_theme_toggle()
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
