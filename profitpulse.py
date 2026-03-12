@@ -1820,6 +1820,15 @@ def render_sidebar() -> str:
 # MAIN ROUTER
 # ────────────────────────────────────────────────
 def main() -> None:
+    # Global error handler
+    try:
+        _main_impl()
+    except Exception as e:
+        st.error(f"⚠️ An error occurred: {str(e)}")
+        st.info("Try refreshing the page. If the problem persists, your session may have expired.")
+        st.button("↻ Reload", on_click=lambda: st.rerun())
+
+def _main_impl() -> None:
     # Apply theme early
     apply_theme()
     
