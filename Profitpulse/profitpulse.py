@@ -327,44 +327,127 @@ st.markdown("""
 # ────────────────────────────────────────────────
 def render_theme_toggle():
     """Render theme toggle button and apply theme"""
-    # Get current theme
-    theme = st.session_state.get("theme", "system")
+    # Get current theme - default to dark
+    if "theme" not in st.session_state:
+        st.session_state.theme = "dark"
+    theme = st.session_state.theme
     
     # Theme options
-    col1, col2 = st.columns([6, 1])
-    with col2:
-        theme_options = ["🌙 Dark", "☀️ Light", "⚙️ System"]
-        theme_icons = {"dark": "🌙", "light": "☀️", "system": "⚙️"}
-        current_idx = 0 if theme == "dark" else 1 if theme == "light" else 2
-        
-        selected = st.selectbox(
-            "Theme",
-            options=theme_options,
-            index=current_idx,
-            key="theme_select",
-            label_visibility="collapsed"
-        )
-        
-        # Update theme in session state
-        new_theme = selected.split()[0].lower()
-        if new_theme != theme:
-            st.session_state.theme = new_theme
-            st.rerun()
+    theme_options = ["🌙 Dark", "☀️ Light"]
+    current_idx = 0 if theme == "dark" else 1
+    
+    # Use select_slider for more reliable state management
+    selected = st.select_slider(
+        "Theme",
+        options=theme_options,
+        value=theme_options[current_idx],
+        key="theme_slider"
+    )
+    
+    # Update theme in session state
+    new_theme = "dark" if "Dark" in selected else "light"
+    if new_theme != theme:
+        st.session_state.theme = new_theme
+        st.rerun()
 
 # Apply theme class to body
 def apply_theme():
     """Apply theme CSS class based on user preference"""
-    theme = st.session_state.get("theme", "system")
+    theme = st.session_state.get("theme", "dark")
     
+    # Use Streamlit's native theme support where possible
+    # and CSS variables for the rest
     if theme == "light":
-        st.markdown("""<script>
-            document.body.classList.add('light-mode');
-        </script>""", unsafe_allow_html=True)
-    elif theme == "dark":
-        st.markdown("""<script>
-            document.body.classList.remove('light-mode');
-        </script>""", unsafe_allow_html=True)
-    # System theme - no explicit class, uses media query
+        st.markdown("""
+        <style>
+            /* Light mode CSS overrides */
+            .block-container { background: #ffffff !important; }
+            section[data-testid="stMain"] { background: #ffffff !important; }
+            section[data-testid="stMain"] > div { background: #ffffff !important; }
+            [data-testid="stAppViewContainer"] { background: #ffffff !important; }
+            [data-testid="stApp"] { background: #ffffff !important; }
+            .pp-card {
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+                color: #1e293b !important;
+            }
+            .pp-card .value { color: #0f172a !important; }
+            .page-header, h1, h2, h3 { color: #0f172a !important; }
+            .page-sub, .stMarkdown p, .stMarkdown span { color: #475569 !important; }
+            .pnl-row { border-bottom: 1px solid rgba(0,0,0,0.08) !important; color: #334155 !important; }
+            section[data-testid="stSidebar"] { 
+                background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+            }
+            section[data-testid="stSidebar"] .stMarkdown p,
+            section[data-testid="stSidebar"] .stMarkdown span,
+            section[data-testid="stSidebar"] label {
+                color: #334155 !important;
+            }
+            /* Input fields */
+            .stTextInput > div > div > input,
+            .stNumberInput > div > div > input,
+            .stSelectbox > div > div > div {
+                background: #ffffff !important;
+                color: #1e293b !important;
+                border-color: #cbd5e1 !important;
+            }
+            /* DataFrames */
+            [data-testid="stDataFrame"] {
+                background: #ffffff !important;
+            }
+            /* Metrics */
+            [data-testid="stMetricValue"] {
+                color: #0f172a !important;
+            }
+            [data-testid="stMetricLabel"] {
+                color: #64748b !important;
+            }
+            /* Tabs */
+            .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+                background: #e2e8f0 !important;
+                color: #0f172a !important;
+            }
+            /* Buttons */
+            .stButton > button {
+                background: #6366f1 !important;
+                color: #ffffff !important;
+            }
+            /* Alert boxes */
+            .stAlert {
+                background: #f8fafc !important;
+                color: #1e293b !important;
+            }
+            /* Info boxes */
+            .stInfo {
+                background: #e0f2fe !important;
+                color: #0369a1 !important;
+            }
+            /* Warning boxes */
+            .stWarning {
+                background: #fef3c7 !important;
+                color: #92400e !important;
+            }
+            /* Success boxes */
+            .stSuccess {
+                background: #dcfce7 !important;
+                color: #166534 !important;
+            }
+            /* Error boxes */
+            .stError {
+                background: #fee2e2 !important;
+                color: #991b1b !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        # Dark mode CSS (default)
+        st.markdown("""
+        <style>
+            /* Ensure dark mode stays dark */
+            .block-container { background: transparent !important; }
+            [data-testid="stAppViewContainer"] { background: #0f172a !important; }
+            [data-testid="stApp"] { background: #0f172a !important; }
+        </style>
+        """, unsafe_allow_html=True)
 
 
 # ────────────────────────────────────────────────
@@ -390,7 +473,7 @@ def init_state() -> None:
         "onboarded":       False,
         "onboarding_step": 0,
         "last_calculated": None,   # timestamp shown on dashboard
-        "theme":           "system",  # dark, light, or system
+        "theme":           "dark",  # default to dark
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -2179,23 +2262,31 @@ def render_sidebar() -> str:
         if default_page not in nav_options:
             default_page = "Overview"
 
-        page = st.radio(
-            "nav",
+        # Build format func dict once
+        nav_labels = {
+            "Overview":   "🏠  Overview",
+            "Analytics":  "📊  Analytics",
+            "TaxShield":  "🧾  TaxShield",
+            "Data Input": "📁  Data Input",
+            "AI Advisor": "🤖  AI Advisor",
+            "Export":     "📤  Export",
+            "Billing":    "◈  Billing",
+            "Settings":   "⚙️  Settings",
+        }
+        
+        # Use a selectbox instead of radio for more reliable state handling
+        page = st.selectbox(
+            "Navigation",
             nav_options,
             index=nav_options.index(default_page),
-            format_func=lambda x: {
-                "Overview":   "🏠  Overview",
-                "Analytics":  "📊  Analytics",
-                "TaxShield":  "🧾  TaxShield",
-                "Data Input": "📁  Data Input",
-                "AI Advisor": "🤖  AI Advisor",
-                "Export":     "📤  Export",
-                "Billing":    "◈  Billing",
-                "Settings":   "⚙️  Settings",
-            }[x],
-            label_visibility="collapsed",
+            format_func=lambda x: nav_labels.get(x, x),
+            key="nav_select",
+            label_visibility="collapsed"
         )
-        st.session_state.nav_page = page
+        
+        # Only rerun if page changed
+        if page != st.session_state.get("nav_page"):
+            st.session_state.nav_page = page
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
