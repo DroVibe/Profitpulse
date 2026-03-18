@@ -31,7 +31,7 @@ MODEL    = "llama-3.3-70b"
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
-TAX_CALCULATOR_PATH = Path(__file__).resolve().Path(__file__).parent / "fl-tax-shield" / "calculator.py"
+TAX_CALCULATOR_PATH = Path(__file__).resolve().parent / "fl-tax-shield" / "calculator.py"
 TAX_CALCULATOR = None
 
 if TAX_CALCULATOR_PATH.exists():
