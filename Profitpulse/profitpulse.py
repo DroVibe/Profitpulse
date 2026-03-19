@@ -696,7 +696,7 @@ def login_page() -> None:
                             st.error(msg)
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
-                "Free tier: 10 AI queries/day · Pro: Unlimited</p>",
+                "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
 
@@ -1371,10 +1371,10 @@ def page_dashboard() -> None:
     hdr_col, ts_col, btn_col = st.columns([3, 2, 1])
     with hdr_col:
         biz_label = st.session_state.business_type or "Business"
-        st.markdown('<div class="page-header">Dashboard</div>', unsafe_allow_html=True)
+        st.markdown('<div class="page-header">Analytics</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="page-sub">Welcome back, <strong>{biz_label}</strong>'
-            f' — your profitability at a glance</div>',
+            f' — your deeper business performance workspace</div>',
             unsafe_allow_html=True,
         )
     with ts_col:
@@ -1618,12 +1618,26 @@ def page_overview() -> None:
                 tax["sales_tax"]["filing_frequency_label"],
                 "warn",
             )
+        elif tax:
+            pp_card(
+                "Estimated Tax Due",
+                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}*",
+                "Preview in Starter",
+                "default",
+            )
         else:
             pp_card("Estimated Tax Due", "Unlock", "Included in Complete", "default")
     with k6:
         if tax and complete:
             deadline_count = len(tax["sales_tax"]["schedule"])
             pp_card("Tax Deadlines", str(deadline_count), tax["sales_tax"]["schedule"][0]["due_window"], "accent")
+        elif tax:
+            pp_card(
+                "Tax Deadlines",
+                tax["sales_tax"]["filing_frequency_label"],
+                "Upgrade for full schedule",
+                "default",
+            )
         else:
             pp_card("Tax Deadlines", "Preview", "See filing cadence in Complete", "default")
 
@@ -1669,6 +1683,12 @@ def page_overview() -> None:
                 st.write(f"- Next filing: **${tax['sales_tax']['filing_period_sales_tax']:,.0f}**")
                 if st.button("Open TaxShield", use_container_width=True, key="overview_to_tax"):
                     jump_to("TaxShield")
+            elif tax:
+                st.write(f"- County: **{tax['sales_tax']['county']}**")
+                st.write(f"- Filing cadence: **{tax['sales_tax']['filing_frequency_label']}**")
+                st.write("- Full breakdown lives in Complete")
+                if st.button("Preview Complete", use_container_width=True, key="overview_preview_tax"):
+                    jump_to("Billing")
             else:
                 st.write("- County-aware estimates")
                 st.write("- Filing cadence visibility")
@@ -1833,23 +1853,35 @@ def page_taxshield() -> None:
 def page_billing() -> None:
     st.markdown('<div class="page-header">Billing</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="page-sub">Choose the ProfitPulse plan that fits your business stage</div>',
+        '<div class="page-sub">ProfitPulse has two in-app plans: Starter for analytics, Complete for analytics + TaxShield</div>',
         unsafe_allow_html=True,
     )
 
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("##### ProfitPulse Starter")
+        st.caption("Core operating view")
         st.write("- Core analytics dashboard")
         st.write("- Revenue, expenses, profit, and margin visibility")
         st.write("- Business health insights")
+        st.write("- Tax previews across Overview")
         st.write("- Best for owners focused on numbers first")
     with c2:
         st.markdown("##### ProfitPulse Complete")
+        st.caption("Full operating picture")
         st.write("- Everything in Starter")
         st.write("- TaxShield estimates and filing cadence")
         st.write("- County-aware Florida tax context")
         st.write("- Stronger operational planning visibility")
+
+    st.markdown("##### Upgrade framing")
+    u1, u2, u3 = st.columns(3)
+    with u1:
+        st.metric("Starter", "Analytics", "Core visibility")
+    with u2:
+        st.metric("Complete", "Analytics + TaxShield", "Planning clarity")
+    with u3:
+        st.metric("White-glove", "Separate service", "On-premises setup")
 
     st.markdown("##### Current plan")
     st.info(f"You are currently on **{current_plan_label()}**.")
@@ -1861,7 +1893,7 @@ def page_billing() -> None:
         if st.button("Upgrade to Complete", type="primary"):
             st.info("Stripe/billing connection can be attached here next.")
 
-    st.caption("Community/member experiences like a small-business forum or live meetups are future opportunities, not part of the current build.")
+    st.caption("ScaleStack On-Premises is a separate white-glove service line. This page only covers ProfitPulse Starter and ProfitPulse Complete.")
 
 
 def page_settings() -> None:
@@ -2148,92 +2180,6 @@ def page_export() -> None:
 
 
 # ────────────────────────────────────────────────
-# PAGE: PREMIUM
-# FIX: tier-card text colours now fully dark-mode consistent
-# ────────────────────────────────────────────────
-def page_premium() -> None:
-    st.markdown('<div class="page-header">Premium</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">Unlock the full power of ProfitPulse</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("""
-    <div class="premium-card">
-        <p style="font-size:2rem; margin:0;">◈</p>
-        <h2 style="margin:0.5rem 0 0.25rem; font-size:1.4rem; color:#ffffff;">
-            Upgrade to ProfitPulse Pro
-        </h2>
-        <p style="color:#94a3b8; font-size:0.9rem; margin:0;">
-            Advanced analytics · Multi-location · QuickBooks sync · Automated reports
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("""
-        <div class="tier-card">
-            <p style="font-size:0.75rem;font-weight:600;text-transform:uppercase;
-               letter-spacing:0.05em;color:#94a3b8;margin:0;">Free</p>
-            <h2>$0</h2>
-            <p style="font-size:0.8rem;color:#64748b;margin-top:0;">Forever free</p>
-            <hr>
-            <p style="font-size:0.85rem;line-height:1.9;color:#cbd5e1;">
-                CSV upload &amp; manual entry<br>
-                Basic P&amp;L dashboard<br>
-                10 AI queries / day<br>
-                CSV export
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c2:
-        st.markdown("""
-        <div class="tier-card featured">
-            <p style="font-size:0.75rem;font-weight:600;text-transform:uppercase;
-               letter-spacing:0.05em;color:#818cf8;margin:0;">Pro — Popular</p>
-            <h2>$29<span style="font-size:0.9rem;font-weight:400;color:#94a3b8;">/mo</span></h2>
-            <p style="font-size:0.8rem;color:#64748b;margin-top:0;">For growing businesses</p>
-            <hr>
-            <p style="font-size:0.85rem;line-height:1.9;color:#cbd5e1;">
-                Everything in Free<br>
-                Unlimited AI queries<br>
-                PDF reports<br>
-                QuickBooks import<br>
-                Email alerts
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("""
-        <div class="tier-card">
-            <p style="font-size:0.75rem;font-weight:600;text-transform:uppercase;
-               letter-spacing:0.05em;color:#94a3b8;margin:0;">Business</p>
-            <h2>$79<span style="font-size:0.9rem;font-weight:400;color:#94a3b8;">/mo</span></h2>
-            <p style="font-size:0.8rem;color:#64748b;margin-top:0;">Multi-location teams</p>
-            <hr>
-            <p style="font-size:0.85rem;line-height:1.9;color:#cbd5e1;">
-                Everything in Pro<br>
-                Multi-location support<br>
-                5 team members<br>
-                Custom benchmarks<br>
-                Priority support
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-    _, btn_col, _ = st.columns([1, 1, 1])
-    with btn_col:
-        if st.button("Upgrade to Pro — $29/mo", use_container_width=True, type="primary"):
-            st.info("Payment integration coming soon — this will connect to Stripe Checkout.")
-
-
-# ────────────────────────────────────────────────
 # SIDEBAR (extracted from main for clarity)
 # ────────────────────────────────────────────────
 def render_sidebar() -> str:
@@ -2251,12 +2197,11 @@ def render_sidebar() -> str:
         st.caption(f"Signed in as **{st.session_state.username}**")
         if st.session_state.business_type:
             st.caption(f"Business: **{st.session_state.business_type}**")
+        st.caption(f"Plan: **{current_plan_label()}**")
 
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-        nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Export", "Billing", "Settings"]
-        if not has_complete_access():
-            nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Export", "Billing", "Settings"]
+        nav_options = ["Overview", "Analytics", "TaxShield", "Billing", "Settings"]
 
         default_page = st.session_state.get("nav_page", "Overview")
         if default_page not in nav_options:
@@ -2267,9 +2212,6 @@ def render_sidebar() -> str:
             "Overview":   "🏠  Overview",
             "Analytics":  "📊  Analytics",
             "TaxShield":  "🧾  TaxShield",
-            "Data Input": "📁  Data Input",
-            "AI Advisor": "🤖  AI Advisor",
-            "Export":     "📤  Export",
             "Billing":    "◈  Billing",
             "Settings":   "⚙️  Settings",
         }
@@ -2287,6 +2229,22 @@ def render_sidebar() -> str:
         # Only rerun if page changed
         if page != st.session_state.get("nav_page"):
             st.session_state.nav_page = page
+
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+        st.caption("Workspace tools")
+        tool_a, tool_b, tool_c = st.columns(3)
+        with tool_a:
+            if st.button("Data", use_container_width=True, key="sidebar_tool_data"):
+                st.session_state.nav_page = "Data Input"
+                st.rerun()
+        with tool_b:
+            if st.button("AI", use_container_width=True, key="sidebar_tool_ai"):
+                st.session_state.nav_page = "AI Advisor"
+                st.rerun()
+        with tool_c:
+            if st.button("Export", use_container_width=True, key="sidebar_tool_export"):
+                st.session_state.nav_page = "Export"
+                st.rerun()
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
