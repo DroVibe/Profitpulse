@@ -2379,19 +2379,21 @@ def render_sidebar() -> str:
         if page != st.session_state.get("nav_page"):
             st.session_state.nav_page = page
 
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        st.caption("Workspace tools")
-        tool_a, tool_b, tool_c = st.columns(3)
-        with tool_a:
-            if st.button("Data", use_container_width=True, key="sidebar_tool_data"):
+        # ── Quick Actions (prominent row) ───────
+        st.markdown("### Quick Actions")
+        st.caption("One-click access to key tools")
+        
+        qa1, qa2, qa3 = st.columns(3)
+        with qa1:
+            if st.button("📁 Data", use_container_width=True, key="qa_data"):
                 st.session_state.nav_page = "Data Input"
                 st.rerun()
-        with tool_b:
-            if st.button("AI", use_container_width=True, key="sidebar_tool_ai"):
+        with qa2:
+            if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
                 st.session_state.nav_page = "AI Advisor"
                 st.rerun()
-        with tool_c:
-            if st.button("Export", use_container_width=True, key="sidebar_tool_export"):
+        with qa3:
+            if st.button("📤 Export", use_container_width=True, key="qa_export"):
                 st.session_state.nav_page = "Export"
                 st.rerun()
 
