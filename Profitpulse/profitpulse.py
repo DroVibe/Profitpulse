@@ -2347,7 +2347,7 @@ def render_sidebar() -> str:
 
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-        nav_options = ["Overview", "Analytics", "TaxShield", "Billing", "Settings"]
+        nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
 
         default_page = st.session_state.get("nav_page", "Overview")
         if default_page not in nav_options:
@@ -2358,8 +2358,11 @@ def render_sidebar() -> str:
             "Overview":   "🏠  Overview",
             "Analytics":  "📊  Analytics",
             "TaxShield":  "🧾  TaxShield",
+            "Data Input": "📁  Data Input",
+            "AI Advisor": "🤖  AI Advisor",
             "Billing":    "◈  Billing",
             "Settings":   "⚙️  Settings",
+            "Export":     "📤  Export",
         }
         
         # Use a selectbox instead of radio for more reliable state handling
