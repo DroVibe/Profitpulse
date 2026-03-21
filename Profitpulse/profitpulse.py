@@ -1399,6 +1399,28 @@ def page_dashboard() -> None:
 
     pnl = calculate_pnl()
 
+    # ── Natural Language Summary ─────────────────
+    summary_parts = []
+    if pnl["total_revenue"] > 0:
+        if pnl["net_profit"] > 0:
+            summary_parts.append(f"✅ You're profitable — ${pnl['net_profit']:,.0f} net this period")
+        else:
+            summary_parts.append(f"⚠️ Running at a ${abs(pnl['net_profit']):,.0f} loss")
+    
+    if pnl["rev_by_cat"]:
+        top_cat = max(pnl["rev_by_cat"].items(), key=lambda x: x[1])
+        summary_parts.append(f"📈 Top category: {top_cat[0]} (${top_cat[1]:,.0f})")
+    
+    if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
+        summary_parts.append(f"📉 Gross margin at {pnl['gross_margin_pct']:.1f}% — below {BENCHMARKS['gross_margin_pct']}% target")
+    
+    if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
+        summary_parts.append(f"👷 Labor at {pnl['labor_pct']:.1f}% — above {BENCHMARKS['labor_pct_of_revenue']}% target")
+
+    if summary_parts:
+        st.markdown("### 💡 " + " · ".join(summary_parts))
+        st.markdown("---")
+
     # ── KPI Cards ───────────────────────────────
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
@@ -1535,55 +1557,56 @@ def page_dashboard() -> None:
         else:
             st.caption("More data needed for this chart.")
 
-    # ── Charts row 2 ────────────────────────────
-    ch3, ch4 = st.columns(2)
-    with ch3:
-        st.markdown("##### Revenue by Category")
-        if pnl["rev_by_cat"]:
-            df_rc = pd.DataFrame(
-                list(pnl["rev_by_cat"].items()), columns=["Category", "Revenue"]
-            )
-            fig = px.pie(
-                df_rc, names="Category", values="Revenue", hole=0.55,
-                color_discrete_sequence=px.colors.qualitative.Pastel,
-            )
-            fig.update_layout(**CHART_LAYOUT, height=340, showlegend=True)
-            fig.update_traces(textposition="inside", textinfo="percent")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.caption("No sales data available.")
+    # ── Charts row 2 — Hidden behind expander ──
+    with st.expander("📊 See detailed breakdowns", expanded=False):
+        ch3, ch4 = st.columns(2)
+        with ch3:
+            st.markdown("##### Revenue by Category")
+            if pnl["rev_by_cat"]:
+                df_rc = pd.DataFrame(
+                    list(pnl["rev_by_cat"].items()), columns=["Category", "Revenue"]
+                )
+                fig = px.pie(
+                    df_rc, names="Category", values="Revenue", hole=0.55,
+                    color_discrete_sequence=px.colors.qualitative.Pastel,
+                )
+                fig.update_layout(**CHART_LAYOUT, height=340, showlegend=True)
+                fig.update_traces(textposition="inside", textinfo="percent")
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("No sales data available.")
 
-    with ch4:
-        st.markdown("##### Labor Cost by Employee")
-        if pnl["labor_by_emp"]:
-            df_le = pd.DataFrame(
-                list(pnl["labor_by_emp"].items()), columns=["Employee", "Cost"]
+        with ch4:
+            st.markdown("##### Labor Cost by Employee")
+            if pnl["labor_by_emp"]:
+                df_le = pd.DataFrame(
+                    list(pnl["labor_by_emp"].items()), columns=["Employee", "Cost"]
+                )
+                fig = px.bar(
+                    df_le.sort_values("Cost", ascending=True),
+                    x="Cost", y="Employee", orientation="h",
+                    color_discrete_sequence=["#6366f1"],
+                )
+                fig.update_layout(**CHART_LAYOUT, height=340)
+                fig.update_traces(marker_cornerradius=6)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("No labor data available.")
+
+        # ── Operating Expenses breakdown ────────────
+        if pnl["opex_by_cat"]:
+            st.markdown("##### Operating Expenses Breakdown")
+            df_oc = pd.DataFrame(
+                list(pnl["opex_by_cat"].items()), columns=["Category", "Amount"]
             )
             fig = px.bar(
-                df_le.sort_values("Cost", ascending=True),
-                x="Cost", y="Employee", orientation="h",
-                color_discrete_sequence=["#6366f1"],
+                df_oc.sort_values("Amount", ascending=True),
+                x="Amount", y="Category", orientation="h",
+                color_discrete_sequence=["#f59e0b"],
             )
-            fig.update_layout(**CHART_LAYOUT, height=340)
+            fig.update_layout(**CHART_LAYOUT, height=300)
             fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.caption("No labor data available.")
-
-    # ── Operating Expenses breakdown ────────────
-    if pnl["opex_by_cat"]:
-        st.markdown("##### Operating Expenses Breakdown")
-        df_oc = pd.DataFrame(
-            list(pnl["opex_by_cat"].items()), columns=["Category", "Amount"]
-        )
-        fig = px.bar(
-            df_oc.sort_values("Amount", ascending=True),
-            x="Amount", y="Category", orientation="h",
-            color_discrete_sequence=["#f59e0b"],
-        )
-        fig.update_layout(**CHART_LAYOUT, height=300)
-        fig.update_traces(marker_cornerradius=6)
-        st.plotly_chart(fig, use_container_width=True)
 
 
 def page_overview() -> None:
@@ -1784,6 +1807,17 @@ def page_taxshield() -> None:
         st.info("We need more revenue data before we can build a tax estimate.")
         return
 
+    # ── TaxShield Summary ─────────────────────────
+    tax_summary = []
+    if tax:
+        tax_summary.append(f"🏛️ Annual tax estimate: **${tax['net_annual_tax']:,.0f}**")
+        tax_summary.append(f"📅 Next filing: **{tax['sales_tax']['schedule'][0]['due_window']}**")
+        tax_summary.append(f"📍 {tax['sales_tax']['county']} county at {tax['sales_tax']['tax_rate']*100:.2f}%")
+    
+    if tax_summary:
+        st.markdown("### 💡 " + " · ".join(tax_summary))
+        st.markdown("---")
+
     if not complete:
         st.markdown("##### Included with ProfitPulse Complete")
         st.write("Starter users can preview TaxShield, but full estimates and schedules live in Complete.")
@@ -1855,23 +1889,25 @@ def page_taxshield() -> None:
         c2.metric("Annual sales tax", f"${tax['sales_tax']['annual_sales_tax']:,.0f}")
         c3.metric("Net annual estimate", f"${tax['net_annual_tax']:,.0f}")
 
-        st.markdown("##### Tax details")
-        d1, d2, d3 = st.columns(3)
-        d1.metric("Taxable revenue", f"${tax['sales_tax']['taxable_revenue']:,.0f}")
-        d2.metric("Collection allowance", f"${tax['allowance']['annual_allowance']:,.0f}")
-        d3.metric("Corporate tax", f"${tax['corporate_tax']['annual_corporate_tax']:,.0f}")
+        # Tax details in expander
+        with st.expander("📋 See tax details"):
+            d1, d2, d3 = st.columns(3)
+            d1.metric("Taxable revenue", f"${tax['sales_tax']['taxable_revenue']:,.0f}")
+            d2.metric("Collection allowance", f"${tax['allowance']['annual_allowance']:,.0f}")
+            d3.metric("Corporate tax", f"${tax['corporate_tax']['annual_corporate_tax']:,.0f}")
 
-        st.markdown("##### Basis")
-        st.write(f"- County rate: **{tax['sales_tax']['tax_rate'] * 100:.2f}%**")
-        st.write(f"- Business type assumption: **{tax['sales_tax']['business_type_label']}**")
-        st.write(f"- Taxable share assumption: **{tax['sales_tax']['taxable_ratio'] * 100:.0f}%**")
-        st.write(f"- Filing cadence: **{tax['sales_tax']['filing_frequency_label']}**")
-        st.write(f"- Structure: **{tax['corporate_tax']['structure_label']}**")
+        # Basis in expander
+        with st.expander("📐 See assumptions"):
+            st.write(f"- County rate: **{tax['sales_tax']['tax_rate'] * 100:.2f}%**")
+            st.write(f"- Business type: **{tax['sales_tax']['business_type_label']}**")
+            st.write(f"- Taxable share: **{tax['sales_tax']['taxable_ratio'] * 100:.0f}%**")
+            st.write(f"- Filing cadence: **{tax['sales_tax']['filing_frequency_label']}**")
+            st.write(f"- Structure: **{tax['corporate_tax']['structure_label']}**")
 
     with top_right:
         st.markdown("##### Filing schedule")
         st.dataframe(tax['sales_tax']['schedule'], hide_index=True, use_container_width=True)
-        st.caption("Estimate only. Confirm taxability, filing cadence, and official rates with the Florida Department of Revenue or a CPA before filing.")
+        st.caption("Estimate only. Confirm with Florida DOR or CPA before filing.")
 
 
 def page_billing() -> None:
