@@ -151,6 +151,17 @@ st.markdown("""
   .pp-card .value { font-size: 1.75rem; font-weight: 700; line-height: 1.1; margin: 0; }
   .pp-card .sub   { font-size: 0.72rem; opacity: 0.65; margin-top: 0.3rem; }
 
+  .status-strip {
+    border-radius: 14px;
+    padding: 0.95rem 1.1rem;
+    margin: 0.25rem 0 1rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.92) 100%);
+    color: #e2e8f0;
+  }
+  .status-strip strong { display:block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.72; margin-bottom: 0.25rem; }
+  .status-strip span { font-size: 0.95rem; font-weight: 600; display: block; margin-top: 0.25rem; }
+
   .card-default { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
   .card-good    { background: linear-gradient(135deg, #065f46 0%, #059669 100%); }
   .card-warn    { background: linear-gradient(135deg, #92400e 0%, #d97706 100%); }
@@ -1599,7 +1610,70 @@ def page_overview() -> None:
     with plan_col:
         st.caption(f"Plan: **{current_plan_label()}**")
 
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    # ── Business Status Strip ───────────────────────
+    status_messages = []
+    if pnl["net_profit"] > 0:
+        status_messages.append(("✅", "You're profitable this month", "good"))
+    elif pnl["net_profit"] < 0:
+        status_messages.append(("⚠️", "You're currently running at a loss", "warn"))
+    
+    if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
+        status_messages.append(("⚠️", "Margins are tight — review expenses", "warn"))
+    
+    if tax and complete:
+        schedule = tax.get("sales_tax", {}).get("schedule", [])
+        if schedule:
+            next_due = schedule[0].get("due_window", "")
+            if next_due:
+                status_messages.append(("📅", f"Tax deadline: {next_due}", "info"))
+    
+    if status_messages:
+        status_html = '<div class="status-strip"><strong>Business Status</strong>'
+        for emoji, msg, _ in status_messages:
+            status_html += f'<span>{emoji} {msg}</span><br>'
+        status_html = status_html.rstrip('<br>') + '</div>'
+        st.markdown(status_html, unsafe_allow_html=True)
+    # ── End Status Strip ───────────────────────────
+
+    # ── Simplified KPI Cards (3 primary + expander) ─
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        pp_card("💰 Money In", f"${pnl['total_revenue']:,.0f}", f"${pnl['daily_avg_revenue']:,.0f}/day avg", "accent")
+    with k2:
+        theme = "good" if pnl["net_profit"] > 0 else "bad"
+        pp_card("💎 Money Kept", f"${pnl['net_profit']:,.0f}", f"{pnl['net_margin_pct']:.1f}% margin", theme)
+    with k3:
+        if tax and complete:
+            pp_card(
+                "🏛️ Tax Set-Aside",
+                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}",
+                tax["sales_tax"]["filing_frequency_label"],
+                "warn",
+            )
+        elif tax:
+            pp_card(
+                "🏛️ Tax Set-Aside",
+                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}*",
+                "Preview in Starter",
+                "default",
+            )
+        else:
+            pp_card("🏛️ Tax Set-Aside", "—", "Add data to calculate", "default")
+    
+    with st.expander("📊 Show more metrics"):
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            pp_card("Expenses", f"${pnl['total_operating']:,.0f}", "Operating + labor", "default")
+        with m2:
+            theme = "good" if pnl["gross_margin_pct"] >= BENCHMARKS["gross_margin_pct"] else "warn"
+            pp_card("Gross Margin", f"{pnl['gross_margin_pct']:.1f}%", f"Target ≥ {BENCHMARKS['gross_margin_pct']}%", theme)
+        with m3:
+            if tax and complete:
+                next_deadline = tax.get("sales_tax", {}).get("schedule", [{}])[0].get("due_window", "N/A")
+                pp_card("Tax Deadlines", next_deadline, "Next filing window", "info")
+            else:
+                pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
+    # ── End KPI Cards ─────────────────────────────
     with k1:
         pp_card("Revenue", f"${pnl['total_revenue']:,.0f}", f"${pnl['daily_avg_revenue']:,.0f}/day avg", "accent")
     with k2:
@@ -1668,73 +1742,63 @@ def page_overview() -> None:
 
         panel_a, panel_b, panel_c = st.columns(3)
         with panel_a:
-            st.markdown("##### Analytics")
-            st.caption("Your core business health workspace.")
-            st.write(f"- Revenue rows: **{len(st.session_state.df_sales):,}**")
-            st.write(f"- Net margin: **{pnl['net_margin_pct']:.1f}%**")
-            st.write(f"- Breakeven: **${pnl['breakeven_revenue']:,.0f}**")
-            if st.button("Open Analytics", use_container_width=True, key="overview_to_analytics"):
+            st.markdown("##### 📊 Continue to Analytics")
+            if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
                 jump_to("Analytics")
+            st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
         with panel_b:
-            st.markdown("##### TaxShield")
+            st.markdown("##### 🏛️ Continue to TaxShield")
             if tax and complete:
-                st.write(f"- County: **{tax['sales_tax']['county']}**")
-                st.write(f"- Annual estimate: **${tax['net_annual_tax']:,.0f}**")
-                st.write(f"- Next filing: **${tax['sales_tax']['filing_period_sales_tax']:,.0f}**")
-                if st.button("Open TaxShield", use_container_width=True, key="overview_to_tax"):
+                if st.button("Open TaxShield →", use_container_width=True, key="overview_to_tax"):
                     jump_to("TaxShield")
+                st.caption(f"{tax['sales_tax']['county']} county · ${tax['net_annual_tax']:,.0f}/year")
             elif tax:
-                st.write(f"- County: **{tax['sales_tax']['county']}**")
-                st.write(f"- Filing cadence: **{tax['sales_tax']['filing_frequency_label']}**")
-                st.write("- Full breakdown lives in Complete")
-                if st.button("Preview Complete", use_container_width=True, key="overview_preview_tax"):
+                if st.button("Preview Complete →", use_container_width=True, key="overview_preview_tax"):
                     jump_to("Billing")
+                st.caption(f"{tax['sales_tax']['filing_frequency_label']} filing")
             else:
-                st.write("- County-aware estimates")
-                st.write("- Filing cadence visibility")
-                st.write("- Planning support only")
-                if st.button("Unlock in Complete", use_container_width=True, key="overview_unlock_tax"):
+                if st.button("Unlock TaxShield →", use_container_width=True, key="overview_unlock_tax"):
                     jump_to("Billing")
+                st.caption("Add data to calculate")
         with panel_c:
-            st.markdown("##### Complete")
-            st.caption("For owners who want clearer tax planning alongside analytics.")
-            st.write("- Estimated tax snapshot")
-            st.write("- Deadline cadence view")
-            st.write("- Action-oriented planning prompts")
-            if not complete and st.button("Compare plans", use_container_width=True, key="overview_compare"):
-                jump_to("Billing")
+            st.markdown("##### 💎 Plan benefits")
+            if not complete:
+                if st.button("Compare plans →", use_container_width=True, key="overview_compare"):
+                    jump_to("Billing")
+                st.caption("Unlock tax estimates & full analytics")
+            else:
+                st.caption("You have Complete access")
 
     with right:
-        st.markdown("##### Action rail")
-        if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
-            pp_alert(
-                f"Gross margin is {pnl['gross_margin_pct']:.1f}%. Review pricing or cost of goods next.",
-                "warn",
-            )
-        if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
-            pp_alert(
-                f"Labor is {pnl['labor_pct']:.1f}% of revenue. Check scheduling efficiency.",
-                "warn",
-            )
+        st.markdown("##### What to do next")
+        
+        # Dynamic action cards based on data
+        if pnl["net_profit"] < 0:
+            if st.button("📉 Review expenses", use_container_width=True, key="action_expenses"):
+                jump_to("Analytics")
+            st.caption("You're running at a loss — identify cost-cutting opportunities")
+        elif pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
+            if st.button("📊 Check margins", use_container_width=True, key="action_margins"):
+                jump_to("Analytics")
+            st.caption("Your margins are below target — review pricing or costs")
+        elif pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
+            if st.button("👷 Review labor", use_container_width=True, key="action_labor"):
+                jump_to("Analytics")
+            st.caption("Labor costs are high — check scheduling or staffing")
+        
         if tax and complete:
-            next_due = tax["sales_tax"]["schedule"][0]
-            pp_alert(
-                f"Next {tax['sales_tax']['filing_frequency_label'].lower()} tax window: {next_due['due_window']}.",
-                "warn",
-            )
+            if st.button("🏛️ Set aside tax", use_container_width=True, key="action_tax"):
+                jump_to("TaxShield")
+            next_due = tax["sales_tax"]["schedule"][0].get("due_window", "soon")
+            st.caption(f"Tax deadline: {next_due}")
         elif not complete:
-            pp_alert(
-                "Complete unlocks Florida tax estimates, filing cadence, and tax planning snapshots.",
-                "warn",
-            )
-
-        st.markdown("##### Next steps")
-        st.write("1. Recalculate after loading fresh data")
-        st.write("2. Review your margin trend and labor ratio")
-        if complete:
-            st.write("3. Review your TaxShield estimate before the next filing window")
-        else:
-            st.write("3. Upgrade to Complete to estimate tax exposure")
+            if st.button("🔓 Unlock TaxShield", use_container_width=True, key="action_unlock"):
+                jump_to("Billing")
+            st.caption("Upgrade to see tax estimates and deadlines")
+        
+        if st.button("➕ Add transactions", use_container_width=True, key="action_add"):
+            jump_to("Data Input")
+        st.caption("Keep your data fresh for accurate insights")
 
 
 def page_taxshield() -> None:
