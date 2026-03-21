@@ -1674,46 +1674,6 @@ def page_overview() -> None:
             else:
                 pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
     # ── End KPI Cards ─────────────────────────────
-    with k1:
-        pp_card("Revenue", f"${pnl['total_revenue']:,.0f}", f"${pnl['daily_avg_revenue']:,.0f}/day avg", "accent")
-    with k2:
-        pp_card("Expenses", f"${pnl['total_operating']:,.0f}", "Operating + labor", "default")
-    with k3:
-        theme = "good" if pnl["net_profit"] > 0 else "bad"
-        pp_card("Net Profit", f"${pnl['net_profit']:,.0f}", f"{pnl['net_margin_pct']:.1f}% margin", theme)
-    with k4:
-        theme = "good" if pnl["gross_margin_pct"] >= BENCHMARKS["gross_margin_pct"] else "warn"
-        pp_card("Gross Margin", f"{pnl['gross_margin_pct']:.1f}%", f"Target ≥ {BENCHMARKS['gross_margin_pct']}%", theme)
-    with k5:
-        if tax and complete:
-            pp_card(
-                "Estimated Tax Due",
-                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}",
-                tax["sales_tax"]["filing_frequency_label"],
-                "warn",
-            )
-        elif tax:
-            pp_card(
-                "Estimated Tax Due",
-                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}*",
-                "Preview in Starter",
-                "default",
-            )
-        else:
-            pp_card("Estimated Tax Due", "Unlock", "Included in Complete", "default")
-    with k6:
-        if tax and complete:
-            deadline_count = len(tax["sales_tax"]["schedule"])
-            pp_card("Tax Deadlines", str(deadline_count), tax["sales_tax"]["schedule"][0]["due_window"], "accent")
-        elif tax:
-            pp_card(
-                "Tax Deadlines",
-                tax["sales_tax"]["filing_frequency_label"],
-                "Upgrade for full schedule",
-                "default",
-            )
-        else:
-            pp_card("Tax Deadlines", "Preview", "See filing cadence in Complete", "default")
 
     left, right = st.columns([1.8, 1], gap="large")
     with left:
