@@ -343,23 +343,19 @@ def render_theme_toggle():
         st.session_state.theme = "dark"
     theme = st.session_state.theme
     
-    # Theme options
-    theme_options = ["🌙 Dark", "☀️ Light"]
-    current_idx = 0 if theme == "dark" else 1
-    
-    # Use select_slider for more reliable state management
-    selected = st.select_slider(
-        "Theme",
-        options=theme_options,
-        value=theme_options[current_idx],
-        key="theme_slider"
-    )
-    
-    # Update theme in session state
-    new_theme = "dark" if "Dark" in selected else "light"
-    if new_theme != theme:
-        st.session_state.theme = new_theme
-        st.rerun()
+    # Toggle button with icons
+    col_t1, col_t2 = st.columns([1, 4])
+    with col_t1:
+        if theme == "dark":
+            if st.button("🌙", key="theme_toggle_btn", help="Switch to light mode"):
+                st.session_state.theme = "light"
+                st.rerun()
+        else:
+            if st.button("☀️", key="theme_toggle_btn", help="Switch to dark mode"):
+                st.session_state.theme = "dark"
+                st.rerun()
+    with col_t2:
+        st.caption(f"Current: {'Dark' if theme == 'dark' else 'Light'} mode")
 
 # Apply theme class to body
 def apply_theme():
@@ -1403,13 +1399,16 @@ def page_dashboard() -> None:
     summary_parts = []
     if pnl["total_revenue"] > 0:
         if pnl["net_profit"] > 0:
-            summary_parts.append(f"✅ You're profitable — ${pnl['net_profit']:,.0f} net this period")
+            profit_str = f"${pnl['net_profit']:,.0f}"
+            summary_parts.append(f"✅ You're profitable — {profit_str} net this period")
         else:
-            summary_parts.append(f"⚠️ Running at a ${abs(pnl['net_profit']):,.0f} loss")
+            loss_str = f"${abs(pnl['net_profit']):,.0f}"
+            summary_parts.append(f"⚠️ Running at a {loss_str} loss")
     
     if pnl["rev_by_cat"]:
         top_cat = max(pnl["rev_by_cat"].items(), key=lambda x: x[1])
-        summary_parts.append(f"📈 Top category: {top_cat[0]} (${top_cat[1]:,.0f})")
+        cat_str = f"${top_cat[1]:,.0f}"
+        summary_parts.append(f"📈 Top category: {top_cat[0]} ({cat_str})")
     
     if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
         summary_parts.append(f"📉 Gross margin at {pnl['gross_margin_pct']:.1f}% — below {BENCHMARKS['gross_margin_pct']}% target")
@@ -1810,7 +1809,8 @@ def page_taxshield() -> None:
     # ── TaxShield Summary ─────────────────────────
     tax_summary = []
     if tax:
-        tax_summary.append(f"🏛️ Annual tax estimate: **${tax['net_annual_tax']:,.0f}**")
+        tax_amt = f"${tax['net_annual_tax']:,.0f}"
+        tax_summary.append(f"🏛️ Annual tax estimate: **{tax_amt}**")
         tax_summary.append(f"📅 Next filing: **{tax['sales_tax']['schedule'][0]['due_window']}**")
         tax_summary.append(f"📍 {tax['sales_tax']['county']} county at {tax['sales_tax']['tax_rate']*100:.2f}%")
     
@@ -1965,12 +1965,15 @@ def page_settings() -> None:
 
     col1, col2 = st.columns(2)
     with col1:
-        business_type = st.selectbox(
+        new_business_type = st.selectbox(
             "Business type",
             BUSINESS_TYPES,
             index=BUSINESS_TYPES.index(st.session_state.business_type) if st.session_state.business_type in BUSINESS_TYPES else BUSINESS_TYPES.index("Other"),
+            key="settings_biz_type",
         )
-        st.session_state.business_type = business_type
+        if new_business_type != st.session_state.business_type:
+            st.session_state.business_type = new_business_type
+        
         st.selectbox(
             "Plan",
             ["ProfitPulse Starter", "ProfitPulse Complete"],
@@ -1978,6 +1981,17 @@ def page_settings() -> None:
             disabled=True,
             help="Plan state currently comes from the authenticated account tier.",
         )
+        
+        if st.button("💾 Save Settings", type="primary", use_container_width=True):
+            # Save to user DB if logged in
+            username = st.session_state.get("username")
+            if username:
+                users.save_user_setting(username, "business_type", st.session_state.business_type)
+                st.success("Settings saved!")
+            else:
+                st.success("Settings updated (session-only)")
+            st.rerun()
+    
     with col2:
         st.text_input("Florida county", value=st.session_state.tax_county, disabled=True)
         st.text_input("Tax filing frequency", value=st.session_state.tax_filing.title(), disabled=True)
