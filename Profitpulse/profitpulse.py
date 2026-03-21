@@ -1396,28 +1396,35 @@ def page_dashboard() -> None:
     pnl = calculate_pnl()
 
     # ── Natural Language Summary ─────────────────
-    summary_parts = []
     if pnl["total_revenue"] > 0:
+        st.markdown("### 💡 Business Snapshot")
+        cols = st.columns(len([k for k in [
+            pnl["net_profit"] > 0 or pnl["net_profit"] < 0,
+            bool(pnl["rev_by_cat"]),
+            pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"],
+            pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]
+        ] if k]))
+        
+        col_idx = 0
         if pnl["net_profit"] > 0:
-            profit_str = f"${pnl['net_profit']:,.0f}"
-            summary_parts.append(f"✅ You're profitable — {profit_str} net this period")
-        else:
-            loss_str = f"${abs(pnl['net_profit']):,.0f}"
-            summary_parts.append(f"⚠️ Running at a {loss_str} loss")
-    
-    if pnl["rev_by_cat"]:
-        top_cat = max(pnl["rev_by_cat"].items(), key=lambda x: x[1])
-        cat_str = f"${top_cat[1]:,.0f}"
-        summary_parts.append(f"📈 Top category: {top_cat[0]} ({cat_str})")
-    
-    if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
-        summary_parts.append(f"📉 Gross margin at {pnl['gross_margin_pct']:.1f}% — below {BENCHMARKS['gross_margin_pct']}% target")
-    
-    if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
-        summary_parts.append(f"👷 Labor at {pnl['labor_pct']:.1f}% — above {BENCHMARKS['labor_pct_of_revenue']}% target")
-
-    if summary_parts:
-        st.markdown("### 💡 " + " · ".join(summary_parts))
+            with cols[col_idx]: st.metric("Status", "✅ Profitable")
+            col_idx += 1
+        elif pnl["net_profit"] < 0:
+            with cols[col_idx]: st.metric("Status", "⚠️ At a loss")
+            col_idx += 1
+        
+        if pnl["rev_by_cat"]:
+            top_cat = max(pnl["rev_by_cat"].items(), key=lambda x: x[1])
+            with cols[col_idx]: st.metric("Top Category", top_cat[0])
+            col_idx += 1
+        
+        if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
+            with cols[col_idx]: st.metric("Margin", f"⚠️ {pnl['gross_margin_pct']:.1f}%")
+            col_idx += 1
+        
+        if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
+            with cols[col_idx]: st.metric("Labor", f"⚠️ {pnl['labor_pct']:.1f}%")
+        
         st.markdown("---")
 
     # ── KPI Cards ───────────────────────────────
@@ -1807,15 +1814,12 @@ def page_taxshield() -> None:
         return
 
     # ── TaxShield Summary ─────────────────────────
-    tax_summary = []
     if tax:
-        tax_amt = f"${tax['net_annual_tax']:,.0f}"
-        tax_summary.append(f"🏛️ Annual tax estimate: **{tax_amt}**")
-        tax_summary.append(f"📅 Next filing: **{tax['sales_tax']['schedule'][0]['due_window']}**")
-        tax_summary.append(f"📍 {tax['sales_tax']['county']} county at {tax['sales_tax']['tax_rate']*100:.2f}%")
-    
-    if tax_summary:
-        st.markdown("### 💡 " + " · ".join(tax_summary))
+        st.markdown("### 💡 Tax Snapshot")
+        ts1, ts2, ts3 = st.columns(3)
+        with ts1: st.metric("Annual Tax", f"${tax['net_annual_tax']:,.0f}")
+        with ts2: st.metric("Next Filing", tax['sales_tax']['schedule'][0]['due_window'])
+        with ts3: st.metric("County Rate", f"{tax['sales_tax']['tax_rate']*100:.2f}%")
         st.markdown("---")
 
     if not complete:
