@@ -1275,6 +1275,69 @@ def page_data_input() -> None:
 
     st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
 
+    # ── Receipt Scanner ─────────────────────────
+    st.markdown("##### 📷 Add from Receipt")
+    st.caption("Upload a receipt photo from your phone or computer, then add to expenses")
+    
+    with st.expander("Open Receipt Scanner", expanded=False):
+        uploaded_file = st.file_uploader(
+            "Upload receipt (photo or PDF)",
+            type=["png", "jpg", "jpeg", "pdf"],
+            help="Take a photo of your receipt and upload it here"
+        )
+        
+        if uploaded_file is not None:
+            # Show preview if image
+            if uploaded_file.type.startswith("image/"):
+                st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
+            else:
+                st.info(f"PDF uploaded: {uploaded_file.name}")
+            
+            st.markdown("---")
+            st.markdown("**Enter details from the receipt:**")
+            
+            with st.form("receipt_expense_form", clear_on_submit=True):
+                r1, r2 = st.columns(2)
+                with r1:
+                    rec_vendor = st.text_input("Vendor / Store", placeholder="e.g., Home Depot, Starbucks")
+                with r2:
+                    rec_date = st.date_input("Date", value=datetime.date.today())
+                
+                r3, r4 = st.columns(2)
+                with r3:
+                    rec_amount = st.number_input("Total Amount ($)", min_value=0.0, step=0.01)
+                with r4:
+                    rec_category = st.selectbox("Category", EXPENSE_CATEGORIES)
+                
+                rec_desc = st.text_input("Description (optional)", placeholder="What was this for?")
+                
+                if st.form_submit_button("💾 Save to Expenses", type="primary", use_container_width=True):
+                    if rec_amount <= 0:
+                        st.warning("Please enter a valid amount")
+                    else:
+                        # Build expense row
+                        desc_text = f"Receipt: {rec_vendor}"
+                        if rec_desc:
+                            desc_text += f" - {rec_desc}"
+                        
+                        row = pd.DataFrame([{
+                            "date": str(rec_date),
+                            "category": rec_category,
+                            "amount": rec_amount,
+                            "description": desc_text
+                        }])
+                        
+                        # Append to expenses
+                        if st.session_state.df_expenses.empty:
+                            st.session_state.df_expenses = row
+                        else:
+                            st.session_state.df_expenses = pd.concat(
+                                [st.session_state.df_expenses, row], ignore_index=True)
+                        
+                        save_all_user_data()
+                        st.toast(f"Receipt saved: {rec_vendor} - ${rec_amount:,.2f}", icon="✅")
+                        st.rerun()
+
     # ── Manual Entry ────────────────────────────
     st.markdown("##### Or Enter Transactions Manually")
     tab_s, tab_p, tab_e, tab_l = st.tabs(
