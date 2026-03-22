@@ -1781,6 +1781,56 @@ def page_overview() -> None:
             jump_to("Export")
     # ── End Quick Actions ───────────────────────────
 
+    # ── Smart Insights (auto-calculated, free) ──────
+    insights = []
+    
+    # Revenue trend insight
+    if not pnl["monthly"].empty and len(pnl["monthly"]) >= 2:
+        recent = pnl["monthly"].iloc[-1]["revenue"]
+        prev = pnl["monthly"].iloc[-2]["revenue"]
+        if prev > 0:
+            change = ((recent - prev) / prev) * 100
+            if change > 10:
+                insights.append(("📈", f"Revenue up {change:.0f}% vs last month", "good"))
+            elif change < -10:
+                insights.append(("📉", f"Revenue down {abs(change):.0f}% vs last month", "warn"))
+    
+    # Margin insight
+    if pnl["gross_margin_pct"] < 30:
+        insights.append(("⚠️", f"Gross margin at {pnl['gross_margin_pct']:.1f}% — target is 30%+", "warn"))
+    elif pnl["gross_margin_pct"] >= 40:
+        insights.append(("✅", f"Strong margin at {pnl['gross_margin_pct']:.1f}%", "good"))
+    
+    # Expense insight
+    if not st.session_state.df_expenses.empty:
+        top_expense = st.session_state.df_expenses.groupby("category")["amount"].sum().idxmax()
+        top_amount = st.session_state.df_expenses.groupby("category")["amount"].sum().max()
+        insights.append(("💳", f"Largest expense: {top_expense} (${top_amount:,.0f})", "info"))
+    
+    # Profitability insight
+    if pnl["net_profit"] > 0:
+        insights.append(("💰", f"Net profit: ${pnl['net_profit']:,.0f} this month", "good"))
+    elif pnl["net_profit"] < 0:
+        insights.append(("🔴", f"Operating at loss: -${abs(pnl['net_profit']):,.0f}", "warn"))
+    
+    # Tax insight
+    if tax and complete:
+        if tax["sales_tax"]["filing_period_sales_tax"] > 0:
+            insights.append(("🏛️", f"Sales tax due: ${tax['sales_tax']['filing_period_sales_tax']:,.0f}", "info"))
+    
+    if insights:
+        st.markdown("### 🤖 Smart Insights")
+        for emoji, text, _ in insights:
+            st.markdown(f"{emoji} {text}")
+        st.caption("💡 Want deeper analysis?")
+        if st.button("Generate AI Insight →", key="generate_ai_insight"):
+            if not st.session_state.pnl_cache:
+                calculate_pnl()
+            with st.spinner("Analyzing..."):
+                insight = call_ai(_ai_pulse_prompt())
+            st.markdown(insight)
+    # ── End Smart Insights ─────────────────────────
+
     left, right = st.columns([1.8, 1], gap="large")
     with left:
         st.markdown("##### Performance trend")
