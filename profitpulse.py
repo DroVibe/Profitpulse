@@ -1866,7 +1866,10 @@ def page_overview() -> None:
         with panel_a:
             st.markdown("##### 📊 Continue to Analytics")
             if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
+                st.session_state["_test_click"] = True  # DEBUG
                 jump_to("Analytics")
+            if st.session_state.get("_test_click"):
+                st.write("BUTTON CLICKED!")  # DEBUG
             st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
         with panel_b:
             st.markdown("##### 🏛️ Continue to TaxShield")
