@@ -1767,6 +1767,20 @@ def page_overview() -> None:
                 pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
     # ── End KPI Cards ─────────────────────────────
 
+    # ── Quick Actions ───────────────────────────────
+    st.markdown("### ⚡ Quick Actions")
+    qa1, qa2, qa3 = st.columns(3)
+    with qa1:
+        if st.button("📁 Add Data", use_container_width=True, key="qa_overview_data"):
+            jump_to("Data Input")
+    with qa2:
+        if st.button("🤖 Ask AI", use_container_width=True, key="qa_overview_ai"):
+            jump_to("AI Advisor")
+    with qa3:
+        if st.button("📤 Export Report", use_container_width=True, key="qa_overview_export"):
+            jump_to("Export")
+    # ── End Quick Actions ───────────────────────────
+
     left, right = st.columns([1.8, 1], gap="large")
     with left:
         st.markdown("##### Performance trend")
@@ -2378,24 +2392,6 @@ def render_sidebar() -> str:
         # Only rerun if page changed
         if page != st.session_state.get("nav_page"):
             st.session_state.nav_page = page
-
-        # ── Quick Actions (prominent row) ───────
-        st.markdown("### Quick Actions")
-        st.caption("One-click access to key tools")
-        
-        qa1, qa2, qa3 = st.columns(3)
-        with qa1:
-            if st.button("📁 Data", use_container_width=True, key="qa_data"):
-                st.session_state.nav_page = "Data Input"
-                st.rerun()
-        with qa2:
-            if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
-                st.session_state.nav_page = "AI Advisor"
-                st.rerun()
-        with qa3:
-            if st.button("📤 Export", use_container_width=True, key="qa_export"):
-                st.session_state.nav_page = "Export"
-                st.rerun()
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
