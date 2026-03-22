@@ -603,7 +603,6 @@ def jump_to(page: str) -> None:
     # Force clear the widget cache
     if "nav_select" in st.session_state:
         del st.session_state["nav_select"]
-    st.toast(f"Navigating to {page}...")
     st.rerun()
 
 
@@ -1684,7 +1683,7 @@ def page_dashboard() -> None:
 
 
 def page_overview() -> None:
-    # Always show Quick Actions first so navigation works without data
+    # Always show Quick Actions FIRST so navigation works even without data
     st.markdown("### ⚡ Quick Actions")
     qa1, qa2, qa3 = st.columns(3)
     with qa1:
@@ -1697,12 +1696,13 @@ def page_overview() -> None:
         if st.button("📤 Export Report", use_container_width=True, key="qa_overview_export"):
             jump_to("Export")
     
-    # If no data, show prompt but don't return (keep Quick Actions visible)
+    # Show message if no data
     if st.session_state.df_sales.empty:
-        st.info("📊 No data loaded yet. Click **Add Data** above or head to Data Input to load your numbers.")
+        st.info("📊 No data loaded yet. Click **Add Data** above or go to Data Input to load demo data.")
         st.markdown("---")
-        return
-
+        return  # Exit here - Quick Actions already showed at top
+    
+    # Rest of the page (only renders if data exists)
     pnl = calculate_pnl()
     tax = build_tax_snapshot(pnl)
     complete = has_complete_access()
@@ -1862,14 +1862,12 @@ def page_overview() -> None:
         else:
             st.caption("Load more data to unlock the overview trend chart.")
 
+        # These buttons need data to work (they reference pnl/tax variables)
         panel_a, panel_b, panel_c = st.columns(3)
         with panel_a:
             st.markdown("##### 📊 Continue to Analytics")
             if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
-                st.session_state["_test_click"] = True  # DEBUG
                 jump_to("Analytics")
-            if st.session_state.get("_test_click"):
-                st.write("BUTTON CLICKED!")  # DEBUG
             st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
         with panel_b:
             st.markdown("##### 🏛️ Continue to TaxShield")
@@ -2558,15 +2556,8 @@ def _main_impl() -> None:
     # Get target page - prioritize nav_page set by jump_to(), fallback to sidebar
     target = st.session_state.get("nav_page", "Overview")
     
-    # DEBUG: show what's happening
-    st.sidebar.write(f"DEBUG: nav_page={target}")
-    
     # Render sidebar (for UI) but use our target for routing
     _ = render_sidebar()
-    
-    # Double-check nav_page wasn't changed
-    target = st.session_state.get("nav_page", "Overview")
-    st.sidebar.write(f"DEBUG after sidebar: nav_page={target}")
     
     page = target  # Use the target we set, not sidebar return
 
