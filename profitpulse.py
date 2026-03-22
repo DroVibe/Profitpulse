@@ -2437,11 +2437,12 @@ def render_sidebar() -> str:
         current_nav = st.session_state.get("nav_page", "Overview")
         if current_nav not in nav_options:
             current_nav = "Overview"
-        
-        # Pre-set the widget value to match nav_page (this fixes the stale widget issue)
-        st.session_state.nav_select = current_nav
         st.session_state.nav_page_source = "user"  # Reset marker
 
+        # CRITICAL: Delete widget state so our index parameter is respected on rerun
+        # Without this, Streamlit uses cached widget value instead of index
+        if "nav_select" in st.session_state:
+            del st.session_state["nav_select"]
         # Now render the selectbox with the synced state
         page = st.selectbox(
             "Navigation",
