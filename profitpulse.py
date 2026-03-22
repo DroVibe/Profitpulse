@@ -2457,11 +2457,8 @@ def render_sidebar() -> str:
             on_change=None  # Don't auto-update on change
         )
         
-        # Only update nav_page if user changed the selectbox
-        # Clear the jump marker first so user can navigate
-        st.session_state.nav_page_source = "user"
-        if page != current_nav:
-            st.session_state.nav_page = page
+        # Don't update nav_page here - let the main router handle it
+        # This was overwriting nav_page with stale selectbox values
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
