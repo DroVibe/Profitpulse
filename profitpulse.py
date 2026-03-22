@@ -1679,8 +1679,23 @@ def page_dashboard() -> None:
 
 
 def page_overview() -> None:
+    # Always show Quick Actions first so navigation works without data
+    st.markdown("### ⚡ Quick Actions")
+    qa1, qa2, qa3 = st.columns(3)
+    with qa1:
+        if st.button("📁 Add Data", use_container_width=True, key="qa_overview_data"):
+            jump_to("Data Input")
+    with qa2:
+        if st.button("🤖 Ask AI", use_container_width=True, key="qa_overview_ai"):
+            jump_to("AI Advisor")
+    with qa3:
+        if st.button("📤 Export Report", use_container_width=True, key="qa_overview_export"):
+            jump_to("Export")
+    
+    # If no data, show prompt but don't return (keep Quick Actions visible)
     if st.session_state.df_sales.empty:
-        st.info("No data loaded yet. Head to **Data Input** or load the demo.")
+        st.info("📊 No data loaded yet. Click **Add Data** above or head to Data Input to load your numbers.")
+        st.markdown("---")
         return
 
     pnl = calculate_pnl()
@@ -1766,20 +1781,6 @@ def page_overview() -> None:
             else:
                 pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
     # ── End KPI Cards ─────────────────────────────
-
-    # ── Quick Actions ───────────────────────────────
-    st.markdown("### ⚡ Quick Actions")
-    qa1, qa2, qa3 = st.columns(3)
-    with qa1:
-        if st.button("📁 Add Data", use_container_width=True, key="qa_overview_data"):
-            jump_to("Data Input")
-    with qa2:
-        if st.button("🤖 Ask AI", use_container_width=True, key="qa_overview_ai"):
-            jump_to("AI Advisor")
-    with qa3:
-        if st.button("📤 Export Report", use_container_width=True, key="qa_overview_export"):
-            jump_to("Export")
-    # ── End Quick Actions ───────────────────────────
 
     # ── Smart Insights (auto-calculated, free) ──────
     insights = []
