@@ -598,7 +598,12 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
+    # Save pending nav BEFORE rerun so sidebar can read it
+    st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
+    # Clear the nav_select widget key so sidebar selectbox uses our index
+    if "nav_select" in st.session_state:
+        del st.session_state["nav_select"]
     st.rerun()
 
 
@@ -2349,7 +2354,16 @@ def render_sidebar() -> str:
 
         nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
 
-        default_page = st.session_state.get("nav_page", "Overview")
+        # If button triggered navigation, prioritize that over selectbox state
+        if "_pending_nav" in st.session_state:
+            default_page = st.session_state["_pending_nav"]
+            st.session_state.pop("_pending_nav", None)
+            # Clear nav_select widget key so selectbox respects our index
+            if "nav_select" in st.session_state:
+                del st.session_state["nav_select"]
+        else:
+            default_page = st.session_state.get("nav_page", "Overview")
+        
         if default_page not in nav_options:
             default_page = "Overview"
 
@@ -2375,10 +2389,8 @@ def render_sidebar() -> str:
             label_visibility="collapsed"
         )
         
-        # Only rerun if page changed
-        if page != st.session_state.get("nav_page"):
-            st.session_state.nav_page = page
-
+        # Sync nav_page to the selectbox value (for dropdown navigation)
+        st.session_state.nav_page = page
         # ── Quick Actions (prominent row) ───────
         st.markdown("### Quick Actions")
         st.caption("One-click access to key tools")
@@ -2386,16 +2398,13 @@ def render_sidebar() -> str:
         qa1, qa2, qa3 = st.columns(3)
         with qa1:
             if st.button("📁 Data", use_container_width=True, key="qa_data"):
-                st.session_state.nav_page = "Data Input"
-                st.rerun()
+                jump_to("Data Input")
         with qa2:
             if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
-                st.session_state.nav_page = "AI Advisor"
-                st.rerun()
+                jump_to("AI Advisor")
         with qa3:
             if st.button("📤 Export", use_container_width=True, key="qa_export"):
-                st.session_state.nav_page = "Export"
-                st.rerun()
+                jump_to("Export")
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)

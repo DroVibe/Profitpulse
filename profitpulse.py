@@ -27,7 +27,7 @@ APP_NAME  = "ProfitPulse"
 # Placeholder - will be set after st is imported
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
-MODEL    = "llama-3.1-8b"
+MODEL    = "llama-3.3-70b"
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
@@ -598,16 +598,12 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
-    """Navigate to a different page"""
+    # Save pending nav BEFORE rerun so sidebar can read it
     st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
-    # Clear any cached widget
-    for k in list(st.session_state.keys()):
-        if k.startswith("nav"):
-            try:
-                del st.session_state[k]
-            except:
-                pass
+    # Clear the nav_select widget key so sidebar selectbox uses our index
+    if "nav_select" in st.session_state:
+        del st.session_state["nav_select"]
     st.rerun()
 
 
@@ -1688,26 +1684,10 @@ def page_dashboard() -> None:
 
 
 def page_overview() -> None:
-    # Always show Quick Actions FIRST so navigation works even without data
-    st.markdown("### ⚡ Quick Actions")
-    qa1, qa2, qa3 = st.columns(3)
-    with qa1:
-        if st.button("📁 Add Data", use_container_width=True, key="qa_overview_data"):
-            jump_to("Data Input")
-    with qa2:
-        if st.button("🤖 Ask AI", use_container_width=True, key="qa_overview_ai"):
-            jump_to("AI Advisor")
-    with qa3:
-        if st.button("📤 Export Report", use_container_width=True, key="qa_overview_export"):
-            jump_to("Export")
-    
-    # Show message if no data
     if st.session_state.df_sales.empty:
-        st.info("📊 No data loaded yet. Click **Add Data** above or go to Data Input to load demo data.")
-        st.markdown("---")
-        return  # Exit here - Quick Actions already showed at top
-    
-    # Rest of the page (only renders if data exists)
+        st.info("No data loaded yet. Head to **Data Input** or load the demo.")
+        return
+
     pnl = calculate_pnl()
     tax = build_tax_snapshot(pnl)
     complete = has_complete_access()
@@ -1792,56 +1772,6 @@ def page_overview() -> None:
                 pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
     # ── End KPI Cards ─────────────────────────────
 
-    # ── Smart Insights (auto-calculated, free) ──────
-    insights = []
-    
-    # Revenue trend insight
-    if not pnl["monthly"].empty and len(pnl["monthly"]) >= 2:
-        recent = pnl["monthly"].iloc[-1]["revenue"]
-        prev = pnl["monthly"].iloc[-2]["revenue"]
-        if prev > 0:
-            change = ((recent - prev) / prev) * 100
-            if change > 10:
-                insights.append(("📈", f"Revenue up {change:.0f}% vs last month", "good"))
-            elif change < -10:
-                insights.append(("📉", f"Revenue down {abs(change):.0f}% vs last month", "warn"))
-    
-    # Margin insight
-    if pnl["gross_margin_pct"] < 30:
-        insights.append(("⚠️", f"Gross margin at {pnl['gross_margin_pct']:.1f}% — target is 30%+", "warn"))
-    elif pnl["gross_margin_pct"] >= 40:
-        insights.append(("✅", f"Strong margin at {pnl['gross_margin_pct']:.1f}%", "good"))
-    
-    # Expense insight
-    if not st.session_state.df_expenses.empty:
-        top_expense = st.session_state.df_expenses.groupby("category")["amount"].sum().idxmax()
-        top_amount = st.session_state.df_expenses.groupby("category")["amount"].sum().max()
-        insights.append(("💳", f"Largest expense: {top_expense} (${top_amount:,.0f})", "info"))
-    
-    # Profitability insight
-    if pnl["net_profit"] > 0:
-        insights.append(("💰", f"Net profit: ${pnl['net_profit']:,.0f} this month", "good"))
-    elif pnl["net_profit"] < 0:
-        insights.append(("🔴", f"Operating at loss: -${abs(pnl['net_profit']):,.0f}", "warn"))
-    
-    # Tax insight
-    if tax and complete:
-        if tax["sales_tax"]["filing_period_sales_tax"] > 0:
-            insights.append(("🏛️", f"Sales tax due: ${tax['sales_tax']['filing_period_sales_tax']:,.0f}", "info"))
-    
-    if insights:
-        st.markdown("### 🤖 Smart Insights")
-        for emoji, text, _ in insights:
-            st.markdown(f"{emoji} {text}")
-        st.caption("💡 Want deeper analysis?")
-        if st.button("Generate AI Insight →", key="generate_ai_insight"):
-            if not st.session_state.pnl_cache:
-                calculate_pnl()
-            with st.spinner("Analyzing..."):
-                insight = call_ai(_ai_pulse_prompt())
-            st.markdown(insight)
-    # ── End Smart Insights ─────────────────────────
-
     left, right = st.columns([1.8, 1], gap="large")
     with left:
         st.markdown("##### Performance trend")
@@ -1867,7 +1797,6 @@ def page_overview() -> None:
         else:
             st.caption("Load more data to unlock the overview trend chart.")
 
-        # These buttons need data to work (they reference pnl/tax variables)
         panel_a, panel_b, panel_c = st.columns(3)
         with panel_a:
             st.markdown("##### 📊 Continue to Analytics")
@@ -2425,7 +2354,16 @@ def render_sidebar() -> str:
 
         nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
 
-        default_page = st.session_state.get("nav_page", "Overview")
+        # If button triggered navigation, prioritize that over selectbox state
+        if "_pending_nav" in st.session_state:
+            default_page = st.session_state["_pending_nav"]
+            st.session_state.pop("_pending_nav", None)
+            # Clear nav_select widget key so selectbox respects our index
+            if "nav_select" in st.session_state:
+                del st.session_state["nav_select"]
+        else:
+            default_page = st.session_state.get("nav_page", "Overview")
+        
         if default_page not in nav_options:
             default_page = "Overview"
 
@@ -2441,30 +2379,32 @@ def render_sidebar() -> str:
             "Export":     "📤  Export",
         }
         
-        # CRITICAL FIX: Always sync widget state FIRST, before any widget renders
-        # This must happen BEFORE the selectbox is created
-        current_nav = st.session_state.get("nav_page", "Overview")
-        if current_nav not in nav_options:
-            current_nav = "Overview"
-        st.session_state.nav_page_source = "user"  # Reset marker
-
-        # CRITICAL: Delete widget state so our index parameter is respected on rerun
-        # Without this, Streamlit uses cached widget value instead of index
-        if "nav_select" in st.session_state:
-            del st.session_state["nav_select"]
-        # Now render the selectbox with the synced state
+        # Use a selectbox instead of radio for more reliable state handling
         page = st.selectbox(
             "Navigation",
             nav_options,
-            index=nav_options.index(current_nav),
+            index=nav_options.index(default_page),
             format_func=lambda x: nav_labels.get(x, x),
             key="nav_select",
-            label_visibility="collapsed",
-            on_change=None  # Don't auto-update on change
+            label_visibility="collapsed"
         )
         
-        # Don't update nav_page here - let the main router handle it
-        # This was overwriting nav_page with stale selectbox values
+        # Sync nav_page to the selectbox value (for dropdown navigation)
+        st.session_state.nav_page = page
+        # ── Quick Actions (prominent row) ───────
+        st.markdown("### Quick Actions")
+        st.caption("One-click access to key tools")
+        
+        qa1, qa2, qa3 = st.columns(3)
+        with qa1:
+            if st.button("📁 Data", use_container_width=True, key="qa_data"):
+                jump_to("Data Input")
+        with qa2:
+            if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
+                jump_to("AI Advisor")
+        with qa3:
+            if st.button("📤 Export", use_container_width=True, key="qa_export"):
+                jump_to("Export")
 
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
@@ -2558,18 +2498,7 @@ def _main_impl() -> None:
         onboarding_wizard()
         return
 
-    # Get target page - prioritize nav_page set by jump_to(), fallback to sidebar
-    target = st.session_state.get("nav_page", "Overview")
-    
-    # Show persistent debug at top
-    if "_pending_nav" in st.session_state:
-        st.error(f"PENDING NAVIGATION TO: {st.session_state['_pending_nav']}")
-        st.session_state.pop("_pending_nav", None)
-    
-    # Render sidebar (for UI) but use our target for routing
-    _ = render_sidebar()
-    
-    page = target  # Use the target we set, not sidebar return
+    page = render_sidebar()
 
     if page == "Overview":
         page_overview()
