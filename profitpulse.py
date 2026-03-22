@@ -600,7 +600,10 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 def jump_to(page: str) -> None:
     """Navigate to a different page"""
     st.session_state.nav_page = page
-    # Don't set nav_page_source here - let sidebar pre-sync handle it
+    # Force clear the widget cache
+    if "nav_select" in st.session_state:
+        del st.session_state["nav_select"]
+    st.toast(f"Navigating to {page}...")
     st.rerun()
 
 
@@ -2555,8 +2558,15 @@ def _main_impl() -> None:
     # Get target page - prioritize nav_page set by jump_to(), fallback to sidebar
     target = st.session_state.get("nav_page", "Overview")
     
+    # DEBUG: show what's happening
+    st.sidebar.write(f"DEBUG: nav_page={target}")
+    
     # Render sidebar (for UI) but use our target for routing
     _ = render_sidebar()
+    
+    # Double-check nav_page wasn't changed
+    target = st.session_state.get("nav_page", "Overview")
+    st.sidebar.write(f"DEBUG after sidebar: nav_page={target}")
     
     page = target  # Use the target we set, not sidebar return
 
