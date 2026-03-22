@@ -599,6 +599,7 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 def jump_to(page: str) -> None:
     st.session_state.nav_page = page
+    st.session_state.nav_page_source = "jump"  # Mark as programmatic
     st.rerun()
 
 
@@ -2431,17 +2432,25 @@ def render_sidebar() -> str:
         }
         
         # Use a selectbox instead of radio for more reliable state handling
+        # Start with current nav_page to respect jump_to() calls
+        current_nav = st.session_state.get("nav_page", "Overview")
+        if current_nav not in nav_options:
+            current_nav = "Overview"
+            
         page = st.selectbox(
             "Navigation",
             nav_options,
-            index=nav_options.index(default_page),
+            index=nav_options.index(current_nav),
             format_func=lambda x: nav_labels.get(x, x),
             key="nav_select",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            on_change=None  # Don't auto-update on change
         )
         
-        # Only rerun if page changed
-        if page != st.session_state.get("nav_page"):
+        # Only update nav_page if user changed the selectbox
+        # Clear the jump marker first so user can navigate
+        st.session_state.nav_page_source = "user"
+        if page != current_nav:
             st.session_state.nav_page = page
 
         # ── AI Pulse ────────────────────────────
