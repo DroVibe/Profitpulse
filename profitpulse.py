@@ -599,10 +599,17 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 def jump_to(page: str) -> None:
     """Navigate to a different page"""
+    st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
-    # Force clear the widget cache
-    if "nav_select" in st.session_state:
-        del st.session_state["nav_select"]
+    # Clear any cached widget
+    for k in list(st.session_state.keys()):
+        if k.startswith("nav"):
+            try:
+                del st.session_state[k]
+            except:
+                pass
+    # This should definitely show
+    st.error(f"NAVIGATING TO: {page}")
     st.rerun()
 
 
