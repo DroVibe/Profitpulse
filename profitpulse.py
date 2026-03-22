@@ -598,8 +598,9 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
+    """Navigate to a different page"""
     st.session_state.nav_page = page
-    st.session_state.nav_page_source = "jump"  # Mark as programmatic
+    # Don't set nav_page_source here - let sidebar pre-sync handle it
     st.rerun()
 
 
@@ -2431,20 +2432,17 @@ def render_sidebar() -> str:
             "Export":     "📤  Export",
         }
         
-        # Use a selectbox instead of radio for more reliable state handling
-        # Start with current nav_page to respect jump_to() calls
+        # CRITICAL FIX: Always sync widget state FIRST, before any widget renders
+        # This must happen BEFORE the selectbox is created
         current_nav = st.session_state.get("nav_page", "Overview")
         if current_nav not in nav_options:
             current_nav = "Overview"
-            
+        
+        # Pre-set the widget value to match nav_page (this fixes the stale widget issue)
+        st.session_state.nav_select = current_nav
+        st.session_state.nav_page_source = "user"  # Reset marker
 
-        # Fix: If coming from a jump (button click), force widget to sync
-        # On rerun, the selectbox widget has stale value, so we manually set it
-        if st.session_state.get("nav_page_source") == "jump":
-            # Force widget state to match the target page
-            st.session_state.nav_select = current_nav
-            # Clear the jump marker so subsequent sidebar renders work normally
-            st.session_state.nav_page_source = "user"
+        # Now render the selectbox with the synced state
         page = st.selectbox(
             "Navigation",
             nav_options,
