@@ -2551,7 +2551,13 @@ def _main_impl() -> None:
         onboarding_wizard()
         return
 
-    page = render_sidebar()
+    # Get target page - prioritize nav_page set by jump_to(), fallback to sidebar
+    target = st.session_state.get("nav_page", "Overview")
+    
+    # Render sidebar (for UI) but use our target for routing
+    _ = render_sidebar()
+    
+    page = target  # Use the target we set, not sidebar return
 
     if page == "Overview":
         page_overview()
