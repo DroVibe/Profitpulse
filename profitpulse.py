@@ -608,8 +608,6 @@ def jump_to(page: str) -> None:
                 del st.session_state[k]
             except:
                 pass
-    # This should definitely show
-    st.error(f"NAVIGATING TO: {page}")
     st.rerun()
 
 
@@ -2562,6 +2560,11 @@ def _main_impl() -> None:
 
     # Get target page - prioritize nav_page set by jump_to(), fallback to sidebar
     target = st.session_state.get("nav_page", "Overview")
+    
+    # Show persistent debug at top
+    if "_pending_nav" in st.session_state:
+        st.error(f"PENDING NAVIGATION TO: {st.session_state['_pending_nav']}")
+        st.session_state.pop("_pending_nav", None)
     
     # Render sidebar (for UI) but use our target for routing
     _ = render_sidebar()
