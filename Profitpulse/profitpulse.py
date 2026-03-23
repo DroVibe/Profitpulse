@@ -2340,7 +2340,6 @@ def render_sidebar() -> str:
         </div>
         <div style="text-align:center; margin:0 0 0.75rem;">
             <span style="display:inline-block; padding:0.3rem 0.7rem; border-radius:999px; background:linear-gradient(135deg, #f97316 0%, #ef4444 100%); color:#fff; font-size:0.78rem; font-weight:700; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
-                🔥 v0.1.2 - GPT-5.4 Test
             </span>
         </div>
         """, unsafe_allow_html=True)
@@ -2466,7 +2465,6 @@ def render_sidebar() -> str:
             logout()
 
         st.markdown("---")
-        st.caption("v0.1.1 - Test Edit")
     return page
 
 
