@@ -78,7 +78,7 @@ BUSINESS_TYPES = [
 # ────────────────────────────────────────────────
 st.set_page_config(
     page_title="ProfitPulse",
-    page_icon="single_green_pulse_32.png",   # 32px version
+    page_icon="logo.webp",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -2333,7 +2333,7 @@ def render_sidebar() -> str:
     with st.sidebar:
         st.markdown("""
         <div style="text-align:center; padding:1rem 0 0.5rem;">
-            <span style="font-size:1.6rem; color:#e0e0e0;">◈</span>
+            <img src="logo.webp" width="50" alt="ProfitPulse">
             <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
                 ProfitPulse
             </p>
