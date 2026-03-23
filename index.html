@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProfitPulse Dashboard</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">ScaleStack <span>ProfitPulse</span></div>
+            <nav>
+                <a href="#" class="active">Overview</a>
+                <a href="#">Analytics</a>
+                <a href="#">TaxShield</a>
+                <a href="#">Billing</a>
+                <a href="#">Settings</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Your Business at a Glance</h1>
+                <p>Track revenue, margins, and Florida sales tax — all in one place.</p>
+            </div>
+            <div class="date-range">
+                <span>Last 30 days</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+        </section>
+
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Monthly Revenue</div>
+                <div class="kpi-value">$24,850</div>
+                <div class="kpi-change positive">+8.4% vs last month</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Profit Margin</div>
+                <div class="kpi-value positive">18.2%</div>
+                <div class="kpi-change">Margins improving</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Est. Tax Due</div>
+                <div class="kpi-value warning">$1,240</div>
+                <div class="kpi-change warning">Due in 12 days</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Net Profit</div>
+                <div class="kpi-value">$4,523</div>
+                <div class="kpi-change positive">+12.1% vs last month</div>
+            </div>
+        </section>
+
+        <section class="main-grid">
+            <div class="chart-section">
+                <div class="section-header">
+                    <h2>Revenue Trend</h2>
+                    <span class="badge">Last 12 months</span>
+                </div>
+                <div class="chart">
+                    <div class="chart-bar" style="height: 45%"></div>
+                    <div class="chart-bar" style="height: 60%"></div>
+                    <div class="chart-bar" style="height: 52%"></div>
+                    <div class="chart-bar" style="height: 78%"></div>
+                    <div class="chart-bar" style="height: 65%"></div>
+                    <div class="chart-bar" style="height: 85%"></div>
+                    <div class="chart-bar" style="height: 70%"></div>
+                    <div class="chart-bar" style="height: 90%"></div>
+                    <div class="chart-bar" style="height: 75%"></div>
+                    <div class="chart-bar" style="height: 88%"></div>
+                    <div class="chart-bar" style="height: 95%"></div>
+                    <div class="chart-bar" style="height: 82%"></div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="insights-card">
+                    <div class="card-header">
+                        <h3>Smart Insights</h3>
+                        <span class="status good">Healthy</span>
+                    </div>
+                    <div class="insight-item">
+                        <div class="insight-content">
+                            <strong>Margin recovered this week</strong>
+                            <span>Food cost dropped 5% after vendor changes.</span>
+                        </div>
+                        <span class="status info">Insight</span>
+                    </div>
+                    <div class="insight-item">
+                        <div class="insight-content">
+                            <strong>Tax estimate increased</strong>
+                            <span>Q2 revenue lifted projected county sales tax.</span>
+                        </div>
+                        <span class="status alert">Review</span>
+                    </div>
+                </div>
+
+                <div class="deadlines-card">
+                    <div class="card-header">
+                        <h3>TaxShield Deadlines</h3>
+                        <span class="status alert">1 due soon</span>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-content">
+                            <strong>Sales tax remittance</strong>
+                            <span>Miami-Dade County • Due Apr 20</span>
+                        </div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-content">
+                            <strong>Quarterly estimate</strong>
+                            <span>Corporate tax • Due Apr 30</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="actions-section">
+            <h2>Quick Actions</h2>
+            <div class="actions-grid">
+                <button class="action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Add Revenue
+                </button>
+                <button class="action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Add Expense
+                </button>
+                <button class="action-btn primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/></svg>
+                    Generate Report
+                </button>
+                <button class="action-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+                    Export Data
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Powered by <strong>ScaleStack</strong> • Florida business analytics</p>
+    </footer>
+</body>
+</html>
