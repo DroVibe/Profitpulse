@@ -848,7 +848,7 @@ def initialize_demo_workspace() -> None:
 
     st.session_state.onboarded = True
     st.session_state.onboarding_step = None
-    st.session_state.nav_page = "Overview"  # Reset on login
+    st.session_state.nav_page = st.session_state.get("nav_page", "Overview")
 
 
 # ────────────────────────────────────────────────
