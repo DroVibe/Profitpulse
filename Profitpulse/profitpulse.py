@@ -1,7 +1,7 @@
 # ============================================================
 # ProfitPulse — AI-Powered Business Analytics Dashboard
 # Polished & Production-Ready | February 2026
-# Updated: March 2026 - Mobile improvements, Dark/Light mode, Venice key fix
+# Updated: March 2026 - ScaleStack color palette sync (dark-only theme)
 # ============================================================
 from dotenv import load_dotenv
 import os
@@ -78,7 +78,7 @@ BUSINESS_TYPES = [
 # ────────────────────────────────────────────────
 st.set_page_config(
     page_title="ProfitPulse",
-    page_icon="single_green_pulse_32.png",   # 32px version
+    page_icon="logo.webp",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -89,7 +89,7 @@ st.set_page_config(
 #      .premium-card/.tier-card, breaking dark-mode premium page.
 # ADDED: dark-mode alert colours, button radius, input focus ring,
 #        scrollbar, mobile padding tweak, card hover polish.
-# March 2026: Mobile touch optimizations, Light mode support, Theme toggle
+# March 2026: ScaleStack color palette sync (dark-only theme)
 # ────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -106,12 +106,12 @@ st.markdown("""
   ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
   section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+    background: linear-gradient(180deg, #0a0a0a 0%, #14202B 100%);
   }
   section[data-testid="stSidebar"] .stMarkdown p,
   section[data-testid="stSidebar"] .stMarkdown h3,
   section[data-testid="stSidebar"] .stMarkdown span,
-  section[data-testid="stSidebar"] label { color: #e0e0e0 !important; }
+  section[data-testid="stSidebar"] label { color: #a0a0a0 !important; }
 
   /* Theme Toggle Button */
   .theme-toggle {
@@ -119,8 +119,8 @@ st.markdown("""
     top: 10px;
     right: 10px;
     z-index: 9999;
-    background: rgba(99, 102, 241, 0.2);
-    border: 1px solid rgba(99, 102, 241, 0.4);
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
     border-radius: 20px;
     padding: 6px 14px;
     color: #a5b4fc;
@@ -129,13 +129,13 @@ st.markdown("""
     transition: all 0.2s ease;
   }
   .theme-toggle:hover {
-    background: rgba(99, 102, 241, 0.35);
+    background: rgba(59, 130, 246, 0.35);
     color: #fff;
   }
 
   .pp-card {
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 0.75rem;
@@ -155,18 +155,18 @@ st.markdown("""
     border-radius: 14px;
     padding: 0.95rem 1.1rem;
     margin: 0.25rem 0 1rem;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     background: linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.92) 100%);
     color: #e2e8f0;
   }
   .status-strip strong { display:block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.72; margin-bottom: 0.25rem; }
   .status-strip span { font-size: 0.95rem; font-weight: 600; display: block; margin-top: 0.25rem; }
 
-  .card-default { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
+  .card-default { background: linear-gradient(135deg, #14202B 0%, #334155 100%); }
   .card-good    { background: linear-gradient(135deg, #065f46 0%, #059669 100%); }
   .card-warn    { background: linear-gradient(135deg, #92400e 0%, #d97706 100%); }
   .card-bad     { background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%); }
-  .card-accent  { background: linear-gradient(135deg, #312e81 0%, #6366f1 100%); }
+  .card-accent  { background: linear-gradient(135deg, #312e81 0%, #3b82f6 100%); }
 
   /* Dark-mode safe alert colours */
   .pp-alert {
@@ -192,18 +192,18 @@ st.markdown("""
   }
 
   .premium-card {
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 2rem;
     text-align: center;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #14202B 100%);
     color: #e2e8f0;
   }
   .tier-card {
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 16px;
     padding: 1.5rem;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #14202B 0%, #0a0a0a 100%);
     color: #e2e8f0;
     height: 100%;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -212,18 +212,18 @@ st.markdown("""
   .tier-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
   .tier-card h2 { color: #ffffff; margin: 0.25rem 0; }
   .tier-card p  { color: #cbd5e1; }
-  .tier-card hr { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1rem 0; }
+  .tier-card hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0; }
   .tier-card.featured {
-    border-color: #6366f1;
+    border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 8px 24px rgba(99,102,241,0.15);
-    background: linear-gradient(135deg, #2d3748 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #2d3748 0%, #14202B 100%);
   }
 
   .page-header {
     font-size: 1.6rem; font-weight: 700; color: #f1f5f9;
     margin-bottom: 0.25rem; letter-spacing: -0.03em;
   }
-  .page-sub { font-size: 0.9rem; color: #94a3b8; margin-bottom: 1.5rem; }
+  .page-sub { font-size: 0.9rem; color: #a0a0a0; margin-bottom: 1.5rem; }
 
   .stButton > button {
     border-radius: 10px !important;
@@ -233,7 +233,7 @@ st.markdown("""
   .stButton > button:hover { opacity: 0.88; }
 
   input:focus, textarea:focus, select:focus {
-    outline: 2px solid #6366f1 !important;
+    outline: 2px solid #3b82f6 !important;
     outline-offset: 1px !important;
   }
 
@@ -252,7 +252,7 @@ st.markdown("""
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #6366f1;
+      background: #3b82f6;
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       margin-top: -8px;
@@ -260,7 +260,7 @@ st.markdown("""
     input[type="range"]::-webkit-slider-runnable-track {
       height: 8px;
       border-radius: 4px;
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
     }
     input[type="range"]:focus::-webkit-slider-thumb {
       box-shadow: 0 0 0 4px rgba(99,102,241,0.3);
@@ -281,14 +281,14 @@ st.markdown("""
   /* Light Mode Styles */
   .light-mode {
     background: #ffffff !important;
-    color: #1e293b !important;
+    color: #14202B !important;
   }
   .light-mode .block-container {
     background: #ffffff;
   }
   .light-mode .pp-card {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-    color: #1e293b !important;
+    color: #14202B !important;
     border: 1px solid rgba(0,0,0,0.08) !important;
   }
   .light-mode .pp-card .label {
@@ -296,16 +296,16 @@ st.markdown("""
     opacity: 1 !important;
   }
   .light-mode .pp-card .value {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .pp-card .sub {
     color: #64748b !important;
   }
   .light-mode h1, .light-mode h2, .light-mode h3 {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .page-header {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .page-sub {
     color: #64748b !important;
@@ -337,129 +337,13 @@ st.markdown("""
 # THEME TOGGLE FUNCTIONALITY
 # ────────────────────────────────────────────────
 def render_theme_toggle():
-    """Render theme toggle button and apply theme"""
-    # Get current theme - default to dark
-    if "theme" not in st.session_state:
-        st.session_state.theme = "dark"
-    theme = st.session_state.theme
-    
-    # Toggle button with icons
-    col_t1, col_t2 = st.columns([1, 4])
-    with col_t1:
-        if theme == "dark":
-            if st.button("🌙", key="theme_toggle_btn", help="Switch to light mode"):
-                st.session_state.theme = "light"
-                st.rerun()
-        else:
-            if st.button("☀️", key="theme_toggle_btn", help="Switch to dark mode"):
-                st.session_state.theme = "dark"
-                st.rerun()
-    with col_t2:
-        st.caption(f"Current: {'Dark' if theme == 'dark' else 'Light'} mode")
-
-# Apply theme class to body
+    """No theme toggle - dark mode only"""
+    pass  # Dark theme is permanent
 def apply_theme():
-    """Apply theme CSS class based on user preference"""
-    theme = st.session_state.get("theme", "dark")
-    
-    # Use Streamlit's native theme support where possible
-    # and CSS variables for the rest
-    if theme == "light":
-        st.markdown("""
-        <style>
-            /* Light mode CSS overrides */
-            .block-container { background: #ffffff !important; }
-            section[data-testid="stMain"] { background: #ffffff !important; }
-            section[data-testid="stMain"] > div { background: #ffffff !important; }
-            [data-testid="stAppViewContainer"] { background: #ffffff !important; }
-            [data-testid="stApp"] { background: #ffffff !important; }
-            .pp-card {
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-                color: #1e293b !important;
-            }
-            .pp-card .value { color: #0f172a !important; }
-            .page-header, h1, h2, h3 { color: #0f172a !important; }
-            .page-sub, .stMarkdown p, .stMarkdown span { color: #475569 !important; }
-            .pnl-row { border-bottom: 1px solid rgba(0,0,0,0.08) !important; color: #334155 !important; }
-            section[data-testid="stSidebar"] { 
-                background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-            }
-            section[data-testid="stSidebar"] .stMarkdown p,
-            section[data-testid="stSidebar"] .stMarkdown span,
-            section[data-testid="stSidebar"] label {
-                color: #334155 !important;
-            }
-            /* Input fields */
-            .stTextInput > div > div > input,
-            .stNumberInput > div > div > input,
-            .stSelectbox > div > div > div {
-                background: #ffffff !important;
-                color: #1e293b !important;
-                border-color: #cbd5e1 !important;
-            }
-            /* DataFrames */
-            [data-testid="stDataFrame"] {
-                background: #ffffff !important;
-            }
-            /* Metrics */
-            [data-testid="stMetricValue"] {
-                color: #0f172a !important;
-            }
-            [data-testid="stMetricLabel"] {
-                color: #64748b !important;
-            }
-            /* Tabs */
-            .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
-                background: #e2e8f0 !important;
-                color: #0f172a !important;
-            }
-            /* Buttons */
-            .stButton > button {
-                background: #6366f1 !important;
-                color: #ffffff !important;
-            }
-            /* Alert boxes */
-            .stAlert {
-                background: #f8fafc !important;
-                color: #1e293b !important;
-            }
-            /* Info boxes */
-            .stInfo {
-                background: #e0f2fe !important;
-                color: #0369a1 !important;
-            }
-            /* Warning boxes */
-            .stWarning {
-                background: #fef3c7 !important;
-                color: #92400e !important;
-            }
-            /* Success boxes */
-            .stSuccess {
-                background: #dcfce7 !important;
-                color: #166534 !important;
-            }
-            /* Error boxes */
-            .stError {
-                background: #fee2e2 !important;
-                color: #991b1b !important;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-    else:
-        # Dark mode CSS (default)
-        st.markdown("""
-        <style>
-            /* Ensure dark mode stays dark */
-            .block-container { background: transparent !important; }
-            [data-testid="stAppViewContainer"] { background: #0f172a !important; }
-            [data-testid="stApp"] { background: #0f172a !important; }
-        </style>
-        """, unsafe_allow_html=True)
-
-
-# ────────────────────────────────────────────────
-# SESSION STATE
-# ────────────────────────────────────────────────
+    """Apply dark theme CSS (ScaleStack palette)"""
+    # ScaleStack color palette: dark-only theme
+    # Colors set in global CSS at top of file
+    pass
 def init_state() -> None:
     defaults: dict = {
         "authenticated":   False,
@@ -610,7 +494,7 @@ def jump_to(page: str) -> None:
 CHART_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Inter, sans-serif", size=12, color="#94a3b8"),
+    font=dict(family="Inter, sans-serif", size=12, color="#a0a0a0"),
     margin=dict(t=30, b=30, l=40, r=20),
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     xaxis=dict(gridcolor="rgba(241,245,249,0.08)", zerolinecolor="rgba(226,232,240,0.1)"),
@@ -628,9 +512,9 @@ def login_page() -> None:
     with col:
         st.markdown("""
         <div style="text-align:center; margin-top:6vh; margin-bottom:2rem;">
-            <span style="font-size:2.5rem;">◈</span>
+            <p style="color:#64748b; font-size:0.75rem; margin:0; text-transform:uppercase; letter-spacing:2px;">From ScaleStack</p>
             <h1 style="font-size:1.8rem; font-weight:700; margin:0.5rem 0 0.2rem;">ProfitPulse</h1>
-            <p style="color:#94a3b8; font-size:0.9rem; margin:0;">
+            <p style="color:#a0a0a0; font-size:0.9rem; margin:0;">
                 AI-powered profitability analytics for any small business
             </p>
         </div>
@@ -707,7 +591,7 @@ def login_page() -> None:
                         else:
                             st.error(msg)
             st.markdown(
-                "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
+                "<p style='text-align:center;font-size:0.75rem;color:#a0a0a0;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
@@ -1596,7 +1480,7 @@ def page_dashboard() -> None:
             m = pnl["monthly"]
             fig = go.Figure()
             fig.add_trace(go.Bar(x=m["month"], y=m["revenue"],
-                                 name="Revenue", marker_color="#6366f1", marker_cornerradius=6))
+                                 name="Revenue", marker_color="#3b82f6", marker_cornerradius=6))
             fig.add_trace(go.Bar(x=m["month"], y=m["cogs"],
                                  name="COGS",    marker_color="#475569", marker_cornerradius=6))
             if "net_profit" in m.columns:
@@ -1616,8 +1500,8 @@ def page_dashboard() -> None:
             fig.add_trace(go.Scatter(
                 x=m["month"], y=m["gross_margin_pct"],
                 mode="lines+markers",
-                line=dict(color="#6366f1", width=2.5),
-                marker=dict(size=7, color="#6366f1"),
+                line=dict(color="#3b82f6", width=2.5),
+                marker=dict(size=7, color="#3b82f6"),
                 fill="tozeroy", fillcolor="rgba(99,102,241,0.08)",
             ))
             fig.add_hline(
@@ -1659,7 +1543,7 @@ def page_dashboard() -> None:
                 fig = px.bar(
                     df_le.sort_values("Cost", ascending=True),
                     x="Cost", y="Employee", orientation="h",
-                    color_discrete_sequence=["#6366f1"],
+                    color_discrete_sequence=["#3b82f6"],
                 )
                 fig.update_layout(**CHART_LAYOUT, height=340)
                 fig.update_traces(marker_cornerradius=6)
@@ -1683,840 +1567,3 @@ def page_dashboard() -> None:
             st.plotly_chart(fig, use_container_width=True)
 
 
-def page_overview() -> None:
-    if st.session_state.df_sales.empty:
-        st.info("No data loaded yet. Head to **Data Input** or load the demo.")
-        return
-
-    pnl = calculate_pnl()
-    tax = build_tax_snapshot(pnl)
-    complete = has_complete_access()
-    biz_label = st.session_state.business_type or "Business"
-
-    hdr_col, ts_col, plan_col = st.columns([3, 2, 1.4])
-    with hdr_col:
-        st.markdown('<div class="page-header">Overview</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="page-sub">Welcome back, <strong>{biz_label}</strong>'
-            ' — your business health and tax picture in one place</div>',
-            unsafe_allow_html=True,
-        )
-    with ts_col:
-        if st.session_state.last_calculated:
-            st.caption(f"Last calculated: **{st.session_state.last_calculated}**")
-    with plan_col:
-        st.caption(f"Plan: **{current_plan_label()}**")
-
-    # ── Business Status Strip ───────────────────────
-    status_messages = []
-    if pnl["net_profit"] > 0:
-        status_messages.append(("✅", "You're profitable this month", "good"))
-    elif pnl["net_profit"] < 0:
-        status_messages.append(("⚠️", "You're currently running at a loss", "warn"))
-    
-    if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
-        status_messages.append(("⚠️", "Margins are tight — review expenses", "warn"))
-    
-    if tax and complete:
-        schedule = tax.get("sales_tax", {}).get("schedule", [])
-        if schedule:
-            next_due = schedule[0].get("due_window", "")
-            if next_due:
-                status_messages.append(("📅", f"Tax deadline: {next_due}", "info"))
-    
-    if status_messages:
-        status_html = '<div class="status-strip"><strong>Business Status</strong>'
-        for emoji, msg, _ in status_messages:
-            status_html += f'<span>{emoji} {msg}</span><br>'
-        status_html = status_html.rstrip('<br>') + '</div>'
-        st.markdown(status_html, unsafe_allow_html=True)
-    # ── End Status Strip ───────────────────────────
-
-    # ── Simplified KPI Cards (3 primary + expander) ─
-    k1, k2, k3 = st.columns(3)
-    with k1:
-        pp_card("💰 Money In", f"${pnl['total_revenue']:,.0f}", f"${pnl['daily_avg_revenue']:,.0f}/day avg", "accent")
-    with k2:
-        theme = "good" if pnl["net_profit"] > 0 else "bad"
-        pp_card("💎 Money Kept", f"${pnl['net_profit']:,.0f}", f"{pnl['net_margin_pct']:.1f}% margin", theme)
-    with k3:
-        if tax and complete:
-            pp_card(
-                "🏛️ Tax Set-Aside",
-                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}",
-                tax["sales_tax"]["filing_frequency_label"],
-                "warn",
-            )
-        elif tax:
-            pp_card(
-                "🏛️ Tax Set-Aside",
-                f"${tax['sales_tax']['filing_period_sales_tax']:,.0f}*",
-                "Preview in Starter",
-                "default",
-            )
-        else:
-            pp_card("🏛️ Tax Set-Aside", "—", "Add data to calculate", "default")
-    
-    with st.expander("📊 Show more metrics"):
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            pp_card("Expenses", f"${pnl['total_operating']:,.0f}", "Operating + labor", "default")
-        with m2:
-            theme = "good" if pnl["gross_margin_pct"] >= BENCHMARKS["gross_margin_pct"] else "warn"
-            pp_card("Gross Margin", f"{pnl['gross_margin_pct']:.1f}%", f"Target ≥ {BENCHMARKS['gross_margin_pct']}%", theme)
-        with m3:
-            if tax and complete:
-                next_deadline = tax.get("sales_tax", {}).get("schedule", [{}])[0].get("due_window", "N/A")
-                pp_card("Tax Deadlines", next_deadline, "Next filing window", "info")
-            else:
-                pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
-    # ── End KPI Cards ─────────────────────────────
-
-    left, right = st.columns([1.8, 1], gap="large")
-    with left:
-        st.markdown("##### Performance trend")
-        if not pnl["monthly"].empty:
-            monthly = pnl["monthly"]
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=monthly["month"],
-                y=monthly["revenue"],
-                name="Revenue",
-                marker_color="#6366f1",
-                marker_cornerradius=6,
-            ))
-            if "net_profit" in monthly.columns:
-                fig.add_trace(go.Scatter(
-                    x=monthly["month"],
-                    y=monthly["net_profit"],
-                    name="Net Profit",
-                    line=dict(color="#10b981", width=2.5),
-                ))
-            fig.update_layout(**CHART_LAYOUT, barmode="group", height=340)
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.caption("Load more data to unlock the overview trend chart.")
-
-        panel_a, panel_b, panel_c = st.columns(3)
-        with panel_a:
-            st.markdown("##### 📊 Continue to Analytics")
-            if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
-                jump_to("Analytics")
-            st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
-        with panel_b:
-            st.markdown("##### 🏛️ Continue to TaxShield")
-            if tax and complete:
-                if st.button("Open TaxShield →", use_container_width=True, key="overview_to_tax"):
-                    jump_to("TaxShield")
-                st.caption(f"{tax['sales_tax']['county']} county · ${tax['net_annual_tax']:,.0f}/year")
-            elif tax:
-                if st.button("Preview Complete →", use_container_width=True, key="overview_preview_tax"):
-                    jump_to("Billing")
-                st.caption(f"{tax['sales_tax']['filing_frequency_label']} filing")
-            else:
-                if st.button("Unlock TaxShield →", use_container_width=True, key="overview_unlock_tax"):
-                    jump_to("Billing")
-                st.caption("Add data to calculate")
-        with panel_c:
-            st.markdown("##### 💎 Plan benefits")
-            if not complete:
-                if st.button("Compare plans →", use_container_width=True, key="overview_compare"):
-                    jump_to("Billing")
-                st.caption("Unlock tax estimates & full analytics")
-            else:
-                st.caption("You have Complete access")
-
-    with right:
-        st.markdown("##### What to do next")
-        
-        # Dynamic action cards based on data
-        if pnl["net_profit"] < 0:
-            if st.button("📉 Review expenses", use_container_width=True, key="action_expenses"):
-                jump_to("Analytics")
-            st.caption("You're running at a loss — identify cost-cutting opportunities")
-        elif pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
-            if st.button("📊 Check margins", use_container_width=True, key="action_margins"):
-                jump_to("Analytics")
-            st.caption("Your margins are below target — review pricing or costs")
-        elif pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
-            if st.button("👷 Review labor", use_container_width=True, key="action_labor"):
-                jump_to("Analytics")
-            st.caption("Labor costs are high — check scheduling or staffing")
-        
-        if tax and complete:
-            if st.button("🏛️ Set aside tax", use_container_width=True, key="action_tax"):
-                jump_to("TaxShield")
-            next_due = tax["sales_tax"]["schedule"][0].get("due_window", "soon")
-            st.caption(f"Tax deadline: {next_due}")
-        elif not complete:
-            if st.button("🔓 Unlock TaxShield", use_container_width=True, key="action_unlock"):
-                jump_to("Billing")
-            st.caption("Upgrade to see tax estimates and deadlines")
-        
-        if st.button("➕ Add transactions", use_container_width=True, key="action_add"):
-            jump_to("Data Input")
-        st.caption("Keep your data fresh for accurate insights")
-
-
-def page_taxshield() -> None:
-    st.markdown('<div class="page-header">TaxShield</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">Estimate Florida sales tax and review filing cadence without leaving ProfitPulse</div>',
-        unsafe_allow_html=True,
-    )
-
-    if st.session_state.df_sales.empty:
-        st.info("Load business data first so TaxShield can estimate from your actual performance.")
-        return
-
-    if TAX_CALCULATOR is None:
-        st.warning("TaxShield calculator module is not available in this environment.")
-        return
-
-    pnl = calculate_pnl()
-    tax = build_tax_snapshot(pnl)
-    complete = has_complete_access()
-
-    if not tax:
-        st.info("We need more revenue data before we can build a tax estimate.")
-        return
-
-    # ── TaxShield Summary ─────────────────────────
-    if tax:
-        st.markdown("### 💡 Tax Snapshot")
-        ts1, ts2, ts3 = st.columns(3)
-        with ts1: st.metric("Annual Tax", f"${tax['net_annual_tax']:,.0f}")
-        with ts2: st.metric("Next Filing", tax['sales_tax']['schedule'][0]['due_window'])
-        with ts3: st.metric("County Rate", f"{tax['sales_tax']['tax_rate']*100:.2f}%")
-        st.markdown("---")
-
-    if not complete:
-        st.markdown("##### Included with ProfitPulse Complete")
-        st.write("Starter users can preview TaxShield, but full estimates and schedules live in Complete.")
-        p1, p2, p3 = st.columns(3)
-        with p1:
-            st.metric("County-aware estimate", "Included")
-        with p2:
-            st.metric("Filing cadence", tax["sales_tax"]["filing_frequency_label"])
-        with p3:
-            st.metric("Annualized revenue basis", f"${tax['annualized_revenue']:,.0f}")
-        if st.button("Upgrade to Complete", type="primary"):
-            jump_to("Billing")
-        st.caption("TaxShield provides planning support only. Always confirm with a CPA or the Florida Department of Revenue before filing.")
-        return
-
-    with st.sidebar:
-        st.markdown("---")
-        st.subheader("Tax inputs")
-        tax_mod = TAX_CALCULATOR
-        if tax_mod is None:
-            st.warning("Tax calculator unavailable.")
-            return
-        counties = sorted(tax_mod.COUNTY_TAX_RATES)
-        selected_county = st.selectbox(
-            "Florida county",
-            counties,
-            index=counties.index(st.session_state.tax_county) if st.session_state.tax_county in counties else 0,
-            key="tax_county_select",
-        )
-        structures = list(tax_mod.STRUCTURE_LABELS.keys())
-        selected_structure = st.selectbox(
-            "Business structure",
-            structures,
-            index=structures.index(st.session_state.tax_structure) if st.session_state.tax_structure in structures else 0,
-            format_func=lambda value: tax_mod.STRUCTURE_LABELS[value],
-            key="tax_structure_select",
-        )
-        filing_options = list(tax_mod.FILING_FREQUENCY_LABELS.keys())
-        selected_filing = st.selectbox(
-            "Sales tax filing frequency",
-            filing_options,
-            index=filing_options.index(st.session_state.tax_filing) if st.session_state.tax_filing in filing_options else 1,
-            format_func=lambda value: tax_mod.FILING_FREQUENCY_LABELS[value],
-            key="tax_filing_select",
-        )
-        selected_profit_margin = st.slider(
-            "Estimated profit margin",
-            min_value=0.0,
-            max_value=0.5,
-            value=float(st.session_state.tax_profit_margin),
-            step=0.01,
-            format="%.0f%%",
-            key="tax_profit_margin_select",
-        )
-
-    st.session_state.tax_county = selected_county
-    st.session_state.tax_structure = selected_structure
-    st.session_state.tax_filing = selected_filing
-    st.session_state.tax_profit_margin = selected_profit_margin
-    tax = build_tax_snapshot(pnl)
-    if not tax:
-        st.info("We need more data before rendering the full TaxShield estimate.")
-        return
-
-    top_left, top_right = st.columns([2, 1], gap="large")
-    with top_left:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Annualized revenue", f"${tax['annualized_revenue']:,.0f}")
-        c2.metric("Annual sales tax", f"${tax['sales_tax']['annual_sales_tax']:,.0f}")
-        c3.metric("Net annual estimate", f"${tax['net_annual_tax']:,.0f}")
-
-        # Tax details in expander
-        with st.expander("📋 See tax details"):
-            d1, d2, d3 = st.columns(3)
-            d1.metric("Taxable revenue", f"${tax['sales_tax']['taxable_revenue']:,.0f}")
-            d2.metric("Collection allowance", f"${tax['allowance']['annual_allowance']:,.0f}")
-            d3.metric("Corporate tax", f"${tax['corporate_tax']['annual_corporate_tax']:,.0f}")
-
-        # Basis in expander
-        with st.expander("📐 See assumptions"):
-            st.write(f"- County rate: **{tax['sales_tax']['tax_rate'] * 100:.2f}%**")
-            st.write(f"- Business type: **{tax['sales_tax']['business_type_label']}**")
-            st.write(f"- Taxable share: **{tax['sales_tax']['taxable_ratio'] * 100:.0f}%**")
-            st.write(f"- Filing cadence: **{tax['sales_tax']['filing_frequency_label']}**")
-            st.write(f"- Structure: **{tax['corporate_tax']['structure_label']}**")
-
-    with top_right:
-        st.markdown("##### Filing schedule")
-        st.dataframe(tax['sales_tax']['schedule'], hide_index=True, use_container_width=True)
-        st.caption("Estimate only. Confirm with Florida DOR or CPA before filing.")
-
-
-def page_billing() -> None:
-    st.markdown('<div class="page-header">Billing</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">ProfitPulse has two in-app plans: Starter for analytics, Complete for analytics + TaxShield</div>',
-        unsafe_allow_html=True,
-    )
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("##### ProfitPulse Starter")
-        st.caption("Core operating view")
-        st.write("- Core analytics dashboard")
-        st.write("- Revenue, expenses, profit, and margin visibility")
-        st.write("- Business health insights")
-        st.write("- Tax previews across Overview")
-        st.write("- Best for owners focused on numbers first")
-    with c2:
-        st.markdown("##### ProfitPulse Complete")
-        st.caption("Full operating picture")
-        st.write("- Everything in Starter")
-        st.write("- TaxShield estimates and filing cadence")
-        st.write("- County-aware Florida tax context")
-        st.write("- Stronger operational planning visibility")
-
-    st.markdown("##### Upgrade framing")
-    u1, u2, u3 = st.columns(3)
-    with u1:
-        st.metric("Starter", "Analytics", "Core visibility")
-    with u2:
-        st.metric("Complete", "Analytics + TaxShield", "Planning clarity")
-    with u3:
-        st.metric("White-glove", "Separate service", "On-premises setup")
-
-    st.markdown("##### Current plan")
-    st.info(f"You are currently on **{current_plan_label()}**.")
-
-    if has_complete_access():
-        st.success("Complete access is enabled. You can use TaxShield from the main navigation.")
-    else:
-        st.warning("Upgrade to Complete to unlock TaxShield and tax planning surfaces across Overview.")
-        if st.button("Upgrade to Complete", type="primary"):
-            st.info("Stripe/billing connection can be attached here next.")
-
-    st.caption("ScaleStack On-Premises is a separate white-glove service line. This page only covers ProfitPulse Starter and ProfitPulse Complete.")
-
-
-def page_settings() -> None:
-    st.markdown('<div class="page-header">Settings</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">Update the business profile and defaults that power your dashboard</div>',
-        unsafe_allow_html=True,
-    )
-
-    col1, col2 = st.columns(2)
-    with col1:
-        new_business_type = st.selectbox(
-            "Business type",
-            BUSINESS_TYPES,
-            index=BUSINESS_TYPES.index(st.session_state.business_type) if st.session_state.business_type in BUSINESS_TYPES else BUSINESS_TYPES.index("Other"),
-            key="settings_biz_type",
-        )
-        if new_business_type != st.session_state.business_type:
-            st.session_state.business_type = new_business_type
-        
-        st.selectbox(
-            "Plan",
-            ["ProfitPulse Starter", "ProfitPulse Complete"],
-            index=1 if has_complete_access() else 0,
-            disabled=True,
-            help="Plan state currently comes from the authenticated account tier.",
-        )
-        
-        if st.button("💾 Save Settings", type="primary", use_container_width=True):
-            # Save to user DB if logged in
-            username = st.session_state.get("username")
-            if username:
-                users.save_user_setting(username, "business_type", st.session_state.business_type)
-                st.success("Settings saved!")
-            else:
-                st.success("Settings updated (session-only)")
-            st.rerun()
-    
-    with col2:
-        st.text_input("Florida county", value=st.session_state.tax_county, disabled=True)
-        st.text_input("Tax filing frequency", value=st.session_state.tax_filing.title(), disabled=True)
-
-    st.caption("Settings should later become the home for business profile, county/location, and notification preferences.")
-
-
-# ────────────────────────────────────────────────
-# PAGE: AI ADVISOR
-# ────────────────────────────────────────────────
-def page_ai_chat() -> None:
-    st.markdown('<div class="page-header">AI Advisor</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">Ask anything about your profitability — get actionable answers</div>',
-        unsafe_allow_html=True,
-    )
-
-    if st.session_state.df_sales.empty:
-        st.info("Load data first so the AI can analyse your actual numbers.")
-        return
-
-    if not st.session_state.pnl_cache:
-        calculate_pnl()
-
-    if get_api_key():
-        st.caption("✓ Venice AI connected")
-    else:
-        st.caption("⚠ No API key — add VENICE_API_KEY to your .env file or Streamlit Cloud secrets")
-
-    # ── Quick-query buttons ──────────────────────
-    quick_queries = [
-        "Full P&L health check",
-        "Where can I cut costs?",
-        "Labor efficiency analysis",
-        "Margin optimisation ideas",
-        "Seasonal trends & prep",
-        "How do I hit 15% net margin?",
-    ]
-    cols = st.columns(len(quick_queries))
-    selected_quick = None
-    for i, q in enumerate(quick_queries):
-        if cols[i].button(q, use_container_width=True, key=f"qq_{i}"):
-            selected_quick = q
-
-    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-    # ── Chat history display ─────────────────────
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # ── Input — quick button takes priority over typed input ──
-    user_input = st.chat_input("Ask about margins, labor costs, breakeven, trends…")
-    query = selected_quick or user_input
-
-    if query:
-        st.session_state.chat_history.append({"role": "user", "content": query})
-        with st.chat_message("user"):
-            st.markdown(query)
-        with st.chat_message("assistant"):
-            with st.spinner("Analysing your numbers…"):
-                response = call_ai(query)
-            st.markdown(response)
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
-        st.rerun()
-
-    if st.session_state.chat_history:
-        if st.button("🗑 Clear chat history", use_container_width=False):
-            st.session_state.chat_history = []
-            st.rerun()
-
-    st.caption("AI suggestions are advisory — always verify against your dashboard data.")
-
-
-# ────────────────────────────────────────────────
-# PAGE: EXPORT
-# ────────────────────────────────────────────────
-def page_export() -> None:
-    st.markdown('<div class="page-header">Export</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="page-sub">Download raw data and professional reports</div>',
-        unsafe_allow_html=True,
-    )
-
-    if st.session_state.df_sales.empty:
-        st.info("No data to export yet. Load some data first.")
-        return
-
-    pnl = calculate_pnl()
-
-    # ── Raw data downloads ───────────────────────
-    st.markdown("##### Raw Data")
-    datasets = [
-        ("df_sales",     "Sales",     "sales_data.csv"),
-        ("df_purchases", "Purchases", "purchases_data.csv"),
-        ("df_expenses",  "Expenses",  "expenses_data.csv"),
-        ("df_labor",     "Labor",     "labor_data.csv"),
-    ]
-    cols = st.columns(4)
-    for col, (key, label, filename) in zip(cols, datasets):
-        with col:
-            df = st.session_state[key]
-            if not df.empty:
-                st.download_button(
-                    f"↓ {label}", df.to_csv(index=False),
-                    filename, "text/csv", use_container_width=True,
-                )
-            else:
-                st.button(f"{label} — no data", disabled=True, use_container_width=True)
-
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-
-    # ── P&L summary table ───────────────────────
-    st.markdown("##### P&L Summary")
-    pnl_summary = pd.DataFrame([
-        {"Metric": "Total Revenue",        "Value": f"${pnl['total_revenue']:,.2f}"},
-        {"Metric": "COGS",                 "Value": f"${pnl['total_cogs']:,.2f}"},
-        {"Metric": "Gross Profit",         "Value": f"${pnl['gross_profit']:,.2f}"},
-        {"Metric": "Gross Margin %",       "Value": f"{pnl['gross_margin_pct']:.1f}%"},
-        {"Metric": "Operating Expenses",   "Value": f"${pnl['total_opex']:,.2f}"},
-        {"Metric": "Labor Costs",          "Value": f"${pnl['total_labor']:,.2f}"},
-        {"Metric": "Labor % of Revenue",   "Value": f"{pnl['labor_pct']:.1f}%"},
-        {"Metric": "Net Profit",           "Value": f"${pnl['net_profit']:,.2f}"},
-        {"Metric": "Net Margin %",         "Value": f"{pnl['net_margin_pct']:.1f}%"},
-        {"Metric": "Breakeven Revenue",    "Value": f"${pnl['breakeven_revenue']:,.2f}"},
-        {"Metric": "Total Labor Hours",    "Value": f"{pnl['total_hours']:,.1f}"},
-        {"Metric": "Overtime Shifts",      "Value": f"{pnl['overtime_count']} ({pnl['overtime_pct']:.1f}%)"},
-        {"Metric": "Daily Avg Revenue",    "Value": f"${pnl['daily_avg_revenue']:,.2f}"},
-        {"Metric": "Data Period (days)",   "Value": str(pnl['date_range_days'])},
-    ])
-    st.dataframe(pnl_summary, use_container_width=True, hide_index=True)
-    st.download_button(
-        "↓ Download P&L CSV", pnl_summary.to_csv(index=False),
-        "pnl_summary.csv", "text/csv",
-    )
-
-    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-    # ── PDF Report ───────────────────────────────
-    st.markdown("##### PDF Report")
-    if st.button("Generate PDF Report", type="primary"):
-        try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_auto_page_break(auto=True, margin=15)
-
-            # Header
-            pdf.set_font("Helvetica", "B", 22)
-            pdf.cell(0, 14, "ProfitPulse", ln=True, align="C")
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(120, 120, 120)
-            biz_label = st.session_state.business_type or "Business"
-            pdf.cell(
-                0, 6,
-                f"{biz_label}  |  P&L Report  |  {datetime.date.today().strftime('%B %d, %Y')}",
-                ln=True, align="C",
-            )
-            pdf.set_text_color(0, 0, 0)
-            pdf.ln(12)
-
-            # P&L table
-            pdf.set_font("Helvetica", "B", 13)
-            pdf.cell(0, 8, "Profit & Loss Summary", ln=True)
-            pdf.ln(2)
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.set_fill_color(245, 245, 250)
-            pdf.cell(95, 7, "  Line Item",  border=0, fill=True)
-            pdf.cell(50, 7, "Amount",       border=0, align="R", fill=True)
-            pdf.cell(35, 7, "% of Revenue", border=0, align="R", fill=True, ln=True)
-
-            rev = pnl["total_revenue"]
-            def pdf_pct(v: float) -> str:
-                return f"{(v / rev * 100):.1f}%" if rev > 0 else "—"
-
-            pnl_rows_pdf = [
-                ("Revenue",              pnl["total_revenue"],   "100.0%",                          False),
-                ("Cost of Goods Sold",   pnl["total_cogs"],      pdf_pct(pnl["total_cogs"]),        False),
-                ("Gross Profit",         pnl["gross_profit"],    f"{pnl['gross_margin_pct']:.1f}%", True),
-                ("Operating Expenses",   pnl["total_opex"],      pdf_pct(pnl["total_opex"]),        False),
-                ("Labor Costs",          pnl["total_labor"],     f"{pnl['labor_pct']:.1f}%",        False),
-                ("Total Operating",      pnl["total_operating"], pdf_pct(pnl["total_operating"]),   False),
-                ("Net Profit",           pnl["net_profit"],      f"{pnl['net_margin_pct']:.1f}%",   True),
-            ]
-            for label, amount, pct, is_bold in pnl_rows_pdf:
-                pdf.set_font("Helvetica", "B" if is_bold else "", 9)
-                sign      = "-" if amount < 0 else ""
-                formatted = f"{sign}${abs(amount):,.2f}"
-                prefix    = ">> " if is_bold else "   "
-                pdf.cell(95, 7, f"{prefix}{label}", border=0)
-                pdf.cell(50, 7, formatted,          border=0, align="R")
-                pdf.cell(35, 7, pct,                border=0, align="R", ln=True)
-
-            pdf.ln(10)
-
-            # Revenue by category
-            pdf.set_font("Helvetica", "B", 13)
-            pdf.cell(0, 8, "Revenue by Category", ln=True)
-            pdf.ln(2)
-            pdf.set_font("Helvetica", "B", 9)
-            pdf.set_fill_color(245, 245, 250)
-            pdf.cell(95, 7, "  Category",  border=0, fill=True)
-            pdf.cell(50, 7, "Revenue",     border=0, align="R", fill=True)
-            pdf.cell(35, 7, "% of Total",  border=0, align="R", fill=True, ln=True)
-            pdf.set_font("Helvetica", "", 9)
-            for cat, amt in pnl.get("rev_by_cat", {}).items():
-                cat_pct = f"{(amt / rev * 100):.1f}%" if rev > 0 else "—"
-                pdf.cell(95, 7, f"  {cat}",    border=0)
-                pdf.cell(50, 7, f"${amt:,.2f}", border=0, align="R")
-                pdf.cell(35, 7, cat_pct,        border=0, align="R", ln=True)
-
-            pdf.ln(10)
-
-            # Expense breakdown
-            if pnl.get("opex_by_cat"):
-                pdf.set_font("Helvetica", "B", 13)
-                pdf.cell(0, 8, "Operating Expenses by Category", ln=True)
-                pdf.ln(2)
-                pdf.set_font("Helvetica", "B", 9)
-                pdf.set_fill_color(245, 245, 250)
-                pdf.cell(95, 7, "  Category", border=0, fill=True)
-                pdf.cell(85, 7, "Amount",     border=0, align="R", fill=True, ln=True)
-                pdf.set_font("Helvetica", "", 9)
-                for cat, amt in pnl["opex_by_cat"].items():
-                    pdf.cell(95, 7, f"  {cat}",    border=0)
-                    pdf.cell(85, 7, f"${amt:,.2f}", border=0, align="R", ln=True)
-                pdf.ln(10)
-
-            # Key metrics
-            pdf.set_font("Helvetica", "B", 13)
-            pdf.cell(0, 8, "Key Metrics", ln=True)
-            pdf.ln(2)
-            pdf.set_font("Helvetica", "", 9)
-            key_metrics = [
-                ("Daily Avg Revenue",  f"${pnl['daily_avg_revenue']:,.2f}"),
-                ("Breakeven Revenue",  f"${pnl['breakeven_revenue']:,.2f}"),
-                ("Total Labor Hours",  f"{pnl['total_hours']:,.1f} hrs"),
-                ("Overtime Shifts",    f"{pnl['overtime_count']} ({pnl['overtime_pct']:.1f}%)"),
-                ("Data Period",        f"{pnl['date_range_days']} days"),
-            ]
-            for label, val in key_metrics:
-                pdf.cell(95, 7, f"  {label}", border=0)
-                pdf.cell(85, 7, val,           border=0, align="R", ln=True)
-
-            # Footer
-            pdf.ln(15)
-            pdf.set_font("Helvetica", "I", 8)
-            pdf.set_text_color(150, 150, 150)
-            pdf.cell(0, 5, f"Generated by ProfitPulse AI  |  {datetime.date.today()}", ln=True, align="C")
-
-            buf = io.BytesIO()
-            pdf.output(buf)
-            st.download_button(
-                "↓ Download PDF", buf.getvalue(),
-                "profitpulse_report.pdf", "application/pdf",
-            )
-            st.toast("PDF ready to download!", icon="📄")
-
-        except Exception as exc:
-            st.error(f"PDF generation error: {exc}")
-
-
-# ────────────────────────────────────────────────
-# SIDEBAR (extracted from main for clarity)
-# ────────────────────────────────────────────────
-def render_sidebar() -> str:
-    """Render sidebar nav + AI Pulse. Returns selected page name."""
-    with st.sidebar:
-        st.markdown("""
-        <div style="text-align:center; padding:1rem 0 0.5rem;">
-            <span style="font-size:1.6rem; color:#e0e0e0;">◈</span>
-            <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
-                ProfitPulse
-            </p>
-        </div>
-        <div style="text-align:center; margin:0 0 0.75rem;">
-            <span style="display:inline-block; padding:0.3rem 0.7rem; border-radius:999px; background:linear-gradient(135deg, #f97316 0%, #ef4444 100%); color:#fff; font-size:0.78rem; font-weight:700; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
-                🔥 v0.1.2 - GPT-5.4 Test
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.caption(f"Signed in as **{st.session_state.username}**")
-        if st.session_state.business_type:
-            st.caption(f"Business: **{st.session_state.business_type}**")
-        st.caption(f"Plan: **{current_plan_label()}**")
-
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-        nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
-
-        # If button triggered navigation, prioritize that over selectbox state
-        if "_pending_nav" in st.session_state:
-            default_page = st.session_state["_pending_nav"]
-            st.session_state.pop("_pending_nav", None)
-            # Clear nav_select widget key so selectbox respects our index
-            if "nav_select" in st.session_state:
-                del st.session_state["nav_select"]
-        else:
-            default_page = st.session_state.get("nav_page", "Overview")
-        
-        if default_page not in nav_options:
-            default_page = "Overview"
-
-        # Build format func dict once
-        nav_labels = {
-            "Overview":   "🏠  Overview",
-            "Analytics":  "📊  Analytics",
-            "TaxShield":  "🧾  TaxShield",
-            "Data Input": "📁  Data Input",
-            "AI Advisor": "🤖  AI Advisor",
-            "Billing":    "◈  Billing",
-            "Settings":   "⚙️  Settings",
-            "Export":     "📤  Export",
-        }
-        
-        # Use a selectbox instead of radio for more reliable state handling
-        page = st.selectbox(
-            "Navigation",
-            nav_options,
-            index=nav_options.index(default_page),
-            format_func=lambda x: nav_labels.get(x, x),
-            key="nav_select",
-            label_visibility="collapsed"
-        )
-        
-        # Sync nav_page to the selectbox value (for dropdown navigation)
-        st.session_state.nav_page = page
-        # ── Quick Actions (prominent row) ───────
-        st.markdown("### Quick Actions")
-        st.caption("One-click access to key tools")
-        
-        qa1, qa2, qa3 = st.columns(3)
-        with qa1:
-            if st.button("📁 Data", use_container_width=True, key="qa_data"):
-                jump_to("Data Input")
-        with qa2:
-            if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
-                jump_to("AI Advisor")
-        with qa3:
-            if st.button("📤 Export", use_container_width=True, key="qa_export"):
-                jump_to("Export")
-
-        # ── AI Pulse ────────────────────────────
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        with st.expander("🤖 AI Pulse", expanded=True):
-            st.caption("Dynamic insight based on your current numbers")
-            if st.button("Generate Insight", use_container_width=True):
-                if st.session_state.df_sales.empty:
-                    st.warning("Load data first so the AI can give meaningful advice.")
-                else:
-                    if not st.session_state.pnl_cache:
-                        calculate_pnl()
-                    with st.spinner("Analysing…"):
-                        insight = call_ai(_ai_pulse_prompt())
-                    st.markdown(insight)
-            # Static fallback tip when no AI call made yet
-            if not st.session_state.pnl_cache:
-                st.info("💡 **Tip:** Track every expense category separately — "
-                        "vague 'Misc' entries hide your biggest cost leaks.")
-
-        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-        # ── Data status ──────────────────────────
-        has_data = not st.session_state.df_sales.empty
-        if has_data:
-            total_rows = sum(
-                len(st.session_state[k])
-                for k in ["df_sales", "df_purchases", "df_expenses", "df_labor"]
-            )
-            st.caption(f"✓ {total_rows:,} records loaded")
-            if st.session_state.last_calculated:
-                st.caption(f"P&L last run: {st.session_state.last_calculated}")
-        else:
-            st.caption("No data loaded")
-
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-        if st.button("🗑 Clear all data", use_container_width=True):
-            for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
-                st.session_state[key] = pd.DataFrame()
-            # Clear from database for non-demo users
-            username = st.session_state.get("username", "")
-            if username and username != "admin":
-                import users as user_db
-                user_db.save_user_data(username, "sales", pd.DataFrame())
-                user_db.save_user_data(username, "purchases", pd.DataFrame())
-                user_db.save_user_data(username, "expenses", pd.DataFrame())
-                user_db.save_user_data(username, "labor", pd.DataFrame())
-            st.session_state.chat_history    = []
-            st.session_state.pnl_cache       = {}
-            st.session_state.last_calculated = None
-            st.session_state.onboarded       = False
-            st.session_state.business_type   = None
-            st.session_state.nav_page        = "Overview"
-            st.session_state.onboarding_step = 0
-            _compute_pnl.clear()
-            st.rerun()
-
-        if st.button("🚪 Sign out", use_container_width=True):
-            logout()
-
-        st.markdown("---")
-        st.caption("v0.1.1 - Test Edit")
-    return page
-
-
-# ────────────────────────────────────────────────
-# MAIN ROUTER
-# ────────────────────────────────────────────────
-def main() -> None:
-    # Global error handler
-    try:
-        _main_impl()
-    except Exception as e:
-        st.error(f"⚠️ An error occurred: {str(e)}")
-        st.info("Try refreshing the page. If the problem persists, your session may have expired.")
-        st.button("↻ Reload", on_click=lambda: st.rerun())
-
-def _main_impl() -> None:
-    # Apply theme early
-    apply_theme()
-    
-    if not st.session_state.authenticated:
-        login_page()
-        return
-    
-    # Render theme toggle in sidebar
-    render_theme_toggle()
-
-    # Show onboarding for brand-new users with no data
-    if not st.session_state.onboarded and st.session_state.df_sales.empty:
-        onboarding_wizard()
-        return
-
-    page = render_sidebar()
-
-    if page == "Overview":
-        page_overview()
-    elif page == "Analytics":
-        page_dashboard()
-    elif page == "TaxShield":
-        page_taxshield()
-    elif page == "Data Input":
-        page_data_input()
-    elif page == "AI Advisor":
-        page_ai_chat()
-    elif page == "Export":
-        page_export()
-    elif page == "Billing":
-        page_billing()
-    elif page == "Settings":
-        page_settings()
-
-
-if __name__ == "__main__":
-    main()
