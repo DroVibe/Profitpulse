@@ -1567,3 +1567,4 @@ def page_dashboard() -> None:
             st.plotly_chart(fig, use_container_width=True)
 
 
+# Force redeploy - Mon Mar 23 14:52:19 EDT 2026
