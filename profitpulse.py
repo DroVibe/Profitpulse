@@ -1,7 +1,7 @@
 # ============================================================
 # ProfitPulse — AI-Powered Business Analytics Dashboard
 # Polished & Production-Ready | February 2026
-# Updated: March 2026 - Mobile improvements, Dark/Light mode, Venice key fix
+# Updated: March 2026 - ScaleStack color palette sync (dark-only theme)
 # ============================================================
 from dotenv import load_dotenv
 import os
@@ -89,7 +89,7 @@ st.set_page_config(
 #      .premium-card/.tier-card, breaking dark-mode premium page.
 # ADDED: dark-mode alert colours, button radius, input focus ring,
 #        scrollbar, mobile padding tweak, card hover polish.
-# March 2026: Mobile touch optimizations, Light mode support, Theme toggle
+# March 2026: ScaleStack color palette sync (dark-only theme)
 # ────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -106,12 +106,12 @@ st.markdown("""
   ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
   section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+    background: linear-gradient(180deg, #0a0a0a 0%, #14202B 100%);
   }
   section[data-testid="stSidebar"] .stMarkdown p,
   section[data-testid="stSidebar"] .stMarkdown h3,
   section[data-testid="stSidebar"] .stMarkdown span,
-  section[data-testid="stSidebar"] label { color: #e0e0e0 !important; }
+  section[data-testid="stSidebar"] label { color: #a0a0a0 !important; }
 
   /* Theme Toggle Button */
   .theme-toggle {
@@ -119,8 +119,8 @@ st.markdown("""
     top: 10px;
     right: 10px;
     z-index: 9999;
-    background: rgba(99, 102, 241, 0.2);
-    border: 1px solid rgba(99, 102, 241, 0.4);
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
     border-radius: 20px;
     padding: 6px 14px;
     color: #a5b4fc;
@@ -129,13 +129,13 @@ st.markdown("""
     transition: all 0.2s ease;
   }
   .theme-toggle:hover {
-    background: rgba(99, 102, 241, 0.35);
+    background: rgba(59, 130, 246, 0.35);
     color: #fff;
   }
 
   .pp-card {
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 1.25rem 1.5rem;
     margin-bottom: 0.75rem;
@@ -155,18 +155,18 @@ st.markdown("""
     border-radius: 14px;
     padding: 0.95rem 1.1rem;
     margin: 0.25rem 0 1rem;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     background: linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.92) 100%);
     color: #e2e8f0;
   }
   .status-strip strong { display:block; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.72; margin-bottom: 0.25rem; }
   .status-strip span { font-size: 0.95rem; font-weight: 600; display: block; margin-top: 0.25rem; }
 
-  .card-default { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
+  .card-default { background: linear-gradient(135deg, #14202B 0%, #334155 100%); }
   .card-good    { background: linear-gradient(135deg, #065f46 0%, #059669 100%); }
   .card-warn    { background: linear-gradient(135deg, #92400e 0%, #d97706 100%); }
   .card-bad     { background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%); }
-  .card-accent  { background: linear-gradient(135deg, #312e81 0%, #6366f1 100%); }
+  .card-accent  { background: linear-gradient(135deg, #312e81 0%, #3b82f6 100%); }
 
   /* Dark-mode safe alert colours */
   .pp-alert {
@@ -192,18 +192,18 @@ st.markdown("""
   }
 
   .premium-card {
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 2rem;
     text-align: center;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #0a0a0a 0%, #14202B 100%);
     color: #e2e8f0;
   }
   .tier-card {
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 16px;
     padding: 1.5rem;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #14202B 0%, #0a0a0a 100%);
     color: #e2e8f0;
     height: 100%;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -212,18 +212,18 @@ st.markdown("""
   .tier-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
   .tier-card h2 { color: #ffffff; margin: 0.25rem 0; }
   .tier-card p  { color: #cbd5e1; }
-  .tier-card hr { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 1rem 0; }
+  .tier-card hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1rem 0; }
   .tier-card.featured {
-    border-color: #6366f1;
+    border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 8px 24px rgba(99,102,241,0.15);
-    background: linear-gradient(135deg, #2d3748 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #2d3748 0%, #14202B 100%);
   }
 
   .page-header {
     font-size: 1.6rem; font-weight: 700; color: #f1f5f9;
     margin-bottom: 0.25rem; letter-spacing: -0.03em;
   }
-  .page-sub { font-size: 0.9rem; color: #94a3b8; margin-bottom: 1.5rem; }
+  .page-sub { font-size: 0.9rem; color: #a0a0a0; margin-bottom: 1.5rem; }
 
   .stButton > button {
     border-radius: 10px !important;
@@ -233,7 +233,7 @@ st.markdown("""
   .stButton > button:hover { opacity: 0.88; }
 
   input:focus, textarea:focus, select:focus {
-    outline: 2px solid #6366f1 !important;
+    outline: 2px solid #3b82f6 !important;
     outline-offset: 1px !important;
   }
 
@@ -252,7 +252,7 @@ st.markdown("""
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #6366f1;
+      background: #3b82f6;
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       margin-top: -8px;
@@ -260,7 +260,7 @@ st.markdown("""
     input[type="range"]::-webkit-slider-runnable-track {
       height: 8px;
       border-radius: 4px;
-      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
     }
     input[type="range"]:focus::-webkit-slider-thumb {
       box-shadow: 0 0 0 4px rgba(99,102,241,0.3);
@@ -281,14 +281,14 @@ st.markdown("""
   /* Light Mode Styles */
   .light-mode {
     background: #ffffff !important;
-    color: #1e293b !important;
+    color: #14202B !important;
   }
   .light-mode .block-container {
     background: #ffffff;
   }
   .light-mode .pp-card {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-    color: #1e293b !important;
+    color: #14202B !important;
     border: 1px solid rgba(0,0,0,0.08) !important;
   }
   .light-mode .pp-card .label {
@@ -296,16 +296,16 @@ st.markdown("""
     opacity: 1 !important;
   }
   .light-mode .pp-card .value {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .pp-card .sub {
     color: #64748b !important;
   }
   .light-mode h1, .light-mode h2, .light-mode h3 {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .page-header {
-    color: #0f172a !important;
+    color: #0a0a0a !important;
   }
   .light-mode .page-sub {
     color: #64748b !important;
@@ -337,129 +337,14 @@ st.markdown("""
 # THEME TOGGLE FUNCTIONALITY
 # ────────────────────────────────────────────────
 def render_theme_toggle():
-    """Render theme toggle button and apply theme"""
-    # Get current theme - default to dark
-    if "theme" not in st.session_state:
-        st.session_state.theme = "dark"
-    theme = st.session_state.theme
-    
-    # Toggle button with icons
-    col_t1, col_t2 = st.columns([1, 4])
-    with col_t1:
-        if theme == "dark":
-            if st.button("🌙", key="theme_toggle_btn", help="Switch to light mode"):
-                st.session_state.theme = "light"
-                st.rerun()
-        else:
-            if st.button("☀️", key="theme_toggle_btn", help="Switch to dark mode"):
-                st.session_state.theme = "dark"
-                st.rerun()
-    with col_t2:
-        st.caption(f"Current: {'Dark' if theme == 'dark' else 'Light'} mode")
-
-# Apply theme class to body
+    """Render theme indicator (dark-only mode)"""
+    # ScaleStack palette: dark theme only
+    st.caption("🎨 Dark mode")
 def apply_theme():
-    """Apply theme CSS class based on user preference"""
-    theme = st.session_state.get("theme", "dark")
-    
-    # Use Streamlit's native theme support where possible
-    # and CSS variables for the rest
-    if theme == "light":
-        st.markdown("""
-        <style>
-            /* Light mode CSS overrides */
-            .block-container { background: #ffffff !important; }
-            section[data-testid="stMain"] { background: #ffffff !important; }
-            section[data-testid="stMain"] > div { background: #ffffff !important; }
-            [data-testid="stAppViewContainer"] { background: #ffffff !important; }
-            [data-testid="stApp"] { background: #ffffff !important; }
-            .pp-card {
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-                color: #1e293b !important;
-            }
-            .pp-card .value { color: #0f172a !important; }
-            .page-header, h1, h2, h3 { color: #0f172a !important; }
-            .page-sub, .stMarkdown p, .stMarkdown span { color: #475569 !important; }
-            .pnl-row { border-bottom: 1px solid rgba(0,0,0,0.08) !important; color: #334155 !important; }
-            section[data-testid="stSidebar"] { 
-                background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-            }
-            section[data-testid="stSidebar"] .stMarkdown p,
-            section[data-testid="stSidebar"] .stMarkdown span,
-            section[data-testid="stSidebar"] label {
-                color: #334155 !important;
-            }
-            /* Input fields */
-            .stTextInput > div > div > input,
-            .stNumberInput > div > div > input,
-            .stSelectbox > div > div > div {
-                background: #ffffff !important;
-                color: #1e293b !important;
-                border-color: #cbd5e1 !important;
-            }
-            /* DataFrames */
-            [data-testid="stDataFrame"] {
-                background: #ffffff !important;
-            }
-            /* Metrics */
-            [data-testid="stMetricValue"] {
-                color: #0f172a !important;
-            }
-            [data-testid="stMetricLabel"] {
-                color: #64748b !important;
-            }
-            /* Tabs */
-            .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
-                background: #e2e8f0 !important;
-                color: #0f172a !important;
-            }
-            /* Buttons */
-            .stButton > button {
-                background: #6366f1 !important;
-                color: #ffffff !important;
-            }
-            /* Alert boxes */
-            .stAlert {
-                background: #f8fafc !important;
-                color: #1e293b !important;
-            }
-            /* Info boxes */
-            .stInfo {
-                background: #e0f2fe !important;
-                color: #0369a1 !important;
-            }
-            /* Warning boxes */
-            .stWarning {
-                background: #fef3c7 !important;
-                color: #92400e !important;
-            }
-            /* Success boxes */
-            .stSuccess {
-                background: #dcfce7 !important;
-                color: #166534 !important;
-            }
-            /* Error boxes */
-            .stError {
-                background: #fee2e2 !important;
-                color: #991b1b !important;
-            }
-        </style>
-        """, unsafe_allow_html=True)
-    else:
-        # Dark mode CSS (default)
-        st.markdown("""
-        <style>
-            /* Ensure dark mode stays dark */
-            .block-container { background: transparent !important; }
-            [data-testid="stAppViewContainer"] { background: #0f172a !important; }
-            [data-testid="stApp"] { background: #0f172a !important; }
-        </style>
-        """, unsafe_allow_html=True)
-
-
-# ────────────────────────────────────────────────
-# SESSION STATE
-# ────────────────────────────────────────────────
+    """Apply dark theme CSS (ScaleStack palette)"""
+    # ScaleStack color palette: dark-only theme
+    # Colors set in global CSS at top of file
+    pass
 def init_state() -> None:
     defaults: dict = {
         "authenticated":   False,
@@ -610,7 +495,7 @@ def jump_to(page: str) -> None:
 CHART_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Inter, sans-serif", size=12, color="#94a3b8"),
+    font=dict(family="Inter, sans-serif", size=12, color="#a0a0a0"),
     margin=dict(t=30, b=30, l=40, r=20),
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     xaxis=dict(gridcolor="rgba(241,245,249,0.08)", zerolinecolor="rgba(226,232,240,0.1)"),
@@ -630,7 +515,7 @@ def login_page() -> None:
         <div style="text-align:center; margin-top:6vh; margin-bottom:2rem;">
             <p style="color:#64748b; font-size:0.75rem; margin:0; text-transform:uppercase; letter-spacing:2px;">From ScaleStack</p>
             <h1 style="font-size:1.8rem; font-weight:700; margin:0.5rem 0 0.2rem;">ProfitPulse</h1>
-            <p style="color:#94a3b8; font-size:0.9rem; margin:0;">
+            <p style="color:#a0a0a0; font-size:0.9rem; margin:0;">
                 AI-powered profitability analytics for any small business
             </p>
         </div>
@@ -707,7 +592,7 @@ def login_page() -> None:
                         else:
                             st.error(msg)
             st.markdown(
-                "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
+                "<p style='text-align:center;font-size:0.75rem;color:#a0a0a0;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
@@ -1596,7 +1481,7 @@ def page_dashboard() -> None:
             m = pnl["monthly"]
             fig = go.Figure()
             fig.add_trace(go.Bar(x=m["month"], y=m["revenue"],
-                                 name="Revenue", marker_color="#6366f1", marker_cornerradius=6))
+                                 name="Revenue", marker_color="#3b82f6", marker_cornerradius=6))
             fig.add_trace(go.Bar(x=m["month"], y=m["cogs"],
                                  name="COGS",    marker_color="#475569", marker_cornerradius=6))
             if "net_profit" in m.columns:
@@ -1616,8 +1501,8 @@ def page_dashboard() -> None:
             fig.add_trace(go.Scatter(
                 x=m["month"], y=m["gross_margin_pct"],
                 mode="lines+markers",
-                line=dict(color="#6366f1", width=2.5),
-                marker=dict(size=7, color="#6366f1"),
+                line=dict(color="#3b82f6", width=2.5),
+                marker=dict(size=7, color="#3b82f6"),
                 fill="tozeroy", fillcolor="rgba(99,102,241,0.08)",
             ))
             fig.add_hline(
@@ -1659,7 +1544,7 @@ def page_dashboard() -> None:
                 fig = px.bar(
                     df_le.sort_values("Cost", ascending=True),
                     x="Cost", y="Employee", orientation="h",
-                    color_discrete_sequence=["#6366f1"],
+                    color_discrete_sequence=["#3b82f6"],
                 )
                 fig.update_layout(**CHART_LAYOUT, height=340)
                 fig.update_traces(marker_cornerradius=6)
@@ -1782,7 +1667,7 @@ def page_overview() -> None:
                 x=monthly["month"],
                 y=monthly["revenue"],
                 name="Revenue",
-                marker_color="#6366f1",
+                marker_color="#3b82f6",
                 marker_cornerradius=6,
             ))
             if "net_profit" in monthly.columns:
@@ -2334,7 +2219,7 @@ def render_sidebar() -> str:
         st.markdown("""
         <div style="text-align:center; padding:1rem 0 0.5rem;">
             <img src="logo.webp" width="50" alt="ScaleStack">
-            <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
+            <p style="font-size:1.1rem;font-weight:600;color:#a0a0a0;margin:0.3rem 0 0;">
                 ProfitPulse
             </p>
             <p style="font-size:0.7rem;color:#64748b;margin:0.2rem 0 0;">From ScaleStack</p>
