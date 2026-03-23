@@ -602,7 +602,7 @@ def jump_to(page: str) -> None:
     st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
     # Clear the nav_select widget key so sidebar selectbox uses our index
-    if "nav_select" in st.session_state:
+    if "nav_select" in st.session_state and st.session_state.get("_pending_nav"):
         del st.session_state["nav_select"]
     st.rerun()
 
@@ -2354,7 +2354,7 @@ def render_sidebar() -> str:
             default_page = st.session_state["_pending_nav"]
             st.session_state.pop("_pending_nav", None)
             # Clear nav_select widget key so selectbox respects our index
-            if "nav_select" in st.session_state:
+            if "nav_select" in st.session_state and st.session_state.get("_pending_nav"):
                 del st.session_state["nav_select"]
         else:
             default_page = st.session_state.get("nav_page", "Overview")
