@@ -628,7 +628,7 @@ def login_page() -> None:
     with col:
         st.markdown("""
         <div style="text-align:center; margin-top:6vh; margin-bottom:2rem;">
-            <span style="font-size:2.5rem;">◈</span>
+            <p style="color:#64748b; font-size:0.75rem; margin:0; text-transform:uppercase; letter-spacing:2px;">From ScaleStack</p>
             <h1 style="font-size:1.8rem; font-weight:700; margin:0.5rem 0 0.2rem;">ProfitPulse</h1>
             <p style="color:#94a3b8; font-size:0.9rem; margin:0;">
                 AI-powered profitability analytics for any small business
@@ -2333,14 +2333,15 @@ def render_sidebar() -> str:
     with st.sidebar:
         st.markdown("""
         <div style="text-align:center; padding:1rem 0 0.5rem;">
-            <img src="logo.webp" width="50" alt="ProfitPulse">
+            <img src="logo.webp" width="50" alt="ScaleStack">
             <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
                 ProfitPulse
             </p>
+            <p style="font-size:0.7rem;color:#64748b;margin:0.2rem 0 0;">From ScaleStack</p>
         </div>
         <div style="text-align:center; margin:0 0 0.75rem;">
             <span style="display:inline-block; padding:0.3rem 0.7rem; border-radius:999px; background:linear-gradient(135deg, #f97316 0%, #ef4444 100%); color:#fff; font-size:0.78rem; font-weight:700; box-shadow:0 6px 16px rgba(239,68,68,0.25);">
-                🔥 v0.1.2 - GPT-5.4 Test
+                v0.1.3
             </span>
         </div>
         """, unsafe_allow_html=True)
