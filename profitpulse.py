@@ -337,9 +337,8 @@ st.markdown("""
 # THEME TOGGLE FUNCTIONALITY
 # ────────────────────────────────────────────────
 def render_theme_toggle():
-    """Render theme indicator (dark-only mode)"""
-    # ScaleStack palette: dark theme only
-    st.caption("🎨 Dark mode")
+    """No theme toggle - dark mode only"""
+    pass  # Dark theme is permanent
 def apply_theme():
     """Apply dark theme CSS (ScaleStack palette)"""
     # ScaleStack color palette: dark-only theme
@@ -2376,8 +2375,7 @@ def _main_impl() -> None:
         login_page()
         return
     
-    # Render theme toggle in sidebar
-    render_theme_toggle()
+    # Theme is dark-only now (ScaleStack palette)
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
