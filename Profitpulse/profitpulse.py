@@ -690,7 +690,7 @@ def login_page() -> None:
                         st.rerun()
                     else:
                         st.error("Invalid credentials.")
-            st.markdown(
+                st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
                 "Demo: admin / pilot2026</p>",
                 unsafe_allow_html=True,
@@ -721,8 +721,8 @@ def login_page() -> None:
                         else:
                             st.error(f"Error: {msg}")
                             print(f"Signup error: {msg}")
-            st.markdown(
-                "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
+                st.markdown(
+            "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
@@ -1229,7 +1229,7 @@ def onboarding_wizard() -> None:
                 st.session_state.onboarding_step = None
                 st.rerun()
         with col2:
-            st.markdown("""
+                st.markdown("""
             **What you get with demo data:**
             - 6 months of sales, purchases, expenses & labor
             - Pre-populated P&L dashboard
@@ -1313,8 +1313,8 @@ def page_data_input() -> None:
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
             
-            st.markdown("---")
-            st.markdown("**Enter details from the receipt:**")
+                st.markdown("---")
+                st.markdown("**Enter details from the receipt:**")
             
             with st.form("receipt_expense_form", clear_on_submit=True):
                 r1, r2 = st.columns(2)
@@ -1650,7 +1650,7 @@ def page_dashboard() -> None:
     with st.expander("📊 See detailed breakdowns", expanded=False):
         ch3, ch4 = st.columns(2)
         with ch3:
-            st.markdown("##### Revenue by Category")
+                st.markdown("##### Revenue by Category")
             if pnl["rev_by_cat"]:
                 df_rc = pd.DataFrame(
                     list(pnl["rev_by_cat"].items()), columns=["Category", "Revenue"]
@@ -1666,7 +1666,7 @@ def page_dashboard() -> None:
                 st.caption("No sales data available.")
 
         with ch4:
-            st.markdown("##### Labor Cost by Employee")
+                st.markdown("##### Labor Cost by Employee")
             if pnl["labor_by_emp"]:
                 df_le = pd.DataFrame(
                     list(pnl["labor_by_emp"].items()), columns=["Employee", "Cost"]
@@ -1684,7 +1684,7 @@ def page_dashboard() -> None:
 
         # ── Operating Expenses breakdown ────────────
         if pnl["opex_by_cat"]:
-            st.markdown("##### Operating Expenses Breakdown")
+                st.markdown("##### Operating Expenses Breakdown")
             df_oc = pd.DataFrame(
                 list(pnl["opex_by_cat"].items()), columns=["Category", "Amount"]
             )
@@ -1814,12 +1814,12 @@ def page_overview() -> None:
 
         panel_a, panel_b, panel_c = st.columns(3)
         with panel_a:
-            st.markdown("##### 📊 Continue to Analytics")
+                st.markdown("##### 📊 Continue to Analytics")
             if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
                 jump_to("Analytics")
             st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
         with panel_b:
-            st.markdown("##### 🏛️ Continue to TaxShield")
+                st.markdown("##### 🏛️ Continue to TaxShield")
             if tax and complete:
                 if st.button("Open TaxShield →", use_container_width=True, key="overview_to_tax"):
                     jump_to("TaxShield")
@@ -1833,7 +1833,7 @@ def page_overview() -> None:
                     jump_to("Billing")
                 st.caption("Add data to calculate")
         with panel_c:
-            st.markdown("##### 💎 Plan benefits")
+                st.markdown("##### 💎 Plan benefits")
             if not complete:
                 if st.button("Compare plans →", use_container_width=True, key="overview_compare"):
                     jump_to("Billing")
@@ -2043,7 +2043,7 @@ def page_billing() -> None:
         if st.button("Upgrade to Complete", type="primary", key="upgrade_complete"):
             # Redirect to Stripe checkout
             checkout_url = "https://checkout.stripe.com/c/pay/cs_live_a1Pr3GEncQdYwOQ1LpU3bwBDGfhsazknQiyhbv1tSOyr5TNEiSHKxWfGFW"
-            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+                st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
             st.info("Redirecting to Stripe...")
         
         st.caption("Secure payment powered by Stripe")
@@ -2136,7 +2136,7 @@ def page_ai_chat() -> None:
     # ── Chat history display ─────────────────────
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+                st.markdown(msg["content"])
 
     # ── Input — quick button takes priority over typed input ──
     user_input = st.chat_input("Ask about margins, labor costs, breakeven, trends…")
@@ -2145,11 +2145,11 @@ def page_ai_chat() -> None:
     if query:
         st.session_state.chat_history.append({"role": "user", "content": query})
         with st.chat_message("user"):
-            st.markdown(query)
+                st.markdown(query)
         with st.chat_message("assistant"):
             with st.spinner("Analysing your numbers…"):
                 response = call_ai(query)
-            st.markdown(response)
+                st.markdown(response)
         st.session_state.chat_history.append({"role": "assistant", "content": response})
         st.rerun()
 
