@@ -2018,8 +2018,16 @@ def page_billing() -> None:
         st.success("Complete access is enabled. You can use TaxShield from the main navigation.")
     else:
         st.warning("Upgrade to Complete to unlock TaxShield and tax planning surfaces across Overview.")
-        if st.button("Upgrade to Complete", type="primary"):
-            st.info("Stripe/billing connection can be attached here next.")
+        
+        st.markdown("##### Upgrade to Complete")
+        st.markdown("**$29/month** — Analytics + Florida TaxShield")
+        if st.button("Upgrade to Complete", type="primary", key="upgrade_complete"):
+            # Redirect to Stripe checkout
+            checkout_url = "https://checkout.stripe.com/c/pay/cs_live_a1Pr3GEncQdYwOQ1LpU3bwBDGfhsazknQiyhbv1tSOyr5TNEiSHKxWfGFW"
+            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+            st.info("Redirecting to Stripe...")
+        
+        st.caption("Secure payment powered by Stripe")
 
     st.caption("ScaleStack On-Premises is a separate white-glove service line. This page only covers ProfitPulse Starter and ProfitPulse Complete.")
 
