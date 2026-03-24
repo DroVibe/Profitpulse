@@ -2387,9 +2387,15 @@ def render_sidebar() -> str:
             if st.button("📁 Data Input", use_container_width=True, key="qa_data"):
                 jump_to("Data Input")
         with qa2:
-            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai"):
-                st.session_state.nav_page = "AI Advisor"
-                st.rerun()
+        with qa2:
+            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
+                jump_to("AI Advisor")
+        with qa2:
+            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
+                jump_to("AI Advisor")
+        with qa2:
+            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
+                jump_to("AI Advisor")
         with qa3:
             if st.button("📤 Export", use_container_width=True, key="qa_export"):
                 jump_to("Export")
