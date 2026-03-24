@@ -598,12 +598,8 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
-    # Save pending nav BEFORE rerun so sidebar can read it
-    st.session_state["_pending_nav"] = page
+    # Simply set the page - selectbox will pick it up on next render
     st.session_state.nav_page = page
-    # Clear the nav_select widget key so sidebar selectbox uses our index
-    if "nav_select" in st.session_state and st.session_state.get("_pending_nav"):
-        del st.session_state["nav_select"]
     st.rerun()
 
 
@@ -2349,15 +2345,11 @@ def render_sidebar() -> str:
 
         nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
 
-        # If button triggered navigation, prioritize that over selectbox state
-        if "_pending_nav" in st.session_state:
-            default_page = st.session_state["_pending_nav"]
-            st.session_state.pop("_pending_nav", None)
-            # Clear nav_select widget key so selectbox respects our index
-            if "nav_select" in st.session_state and st.session_state.get("_pending_nav"):
-                del st.session_state["nav_select"]
-        else:
-            default_page = st.session_state.get("nav_page", "Overview")
+        # Use nav_page directly - jump_to() sets both _pending_nav and nav_page
+        default_page = st.session_state.get("nav_page", "Overview")
+        
+        # Clear any pending nav
+        st.session_state.pop("_pending_nav", None)
         
         if default_page not in nav_options:
             default_page = "Overview"
