@@ -721,8 +721,9 @@ def login_page() -> None:
                         else:
                             st.error(f"Error: {msg}")
                             print(f"Signup error: {msg}")
-                st.markdown(
-            "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
+
+            st.markdown(
+                "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
