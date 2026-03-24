@@ -705,6 +705,7 @@ def login_page() -> None:
                 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
                 signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
                 if signup_submit:
+                    print(f"Form submitted: user={new_user}, email={new_email}")
                     if not new_user or not new_email or not new_pw:
                         st.error("Please fill in all fields.")
                     elif new_pw != confirm_pw:
@@ -712,13 +713,16 @@ def login_page() -> None:
                     elif len(new_pw) < 6:
                         st.error("Password must be at least 6 characters.")
                     else:
+                        print(f"Calling create_user for {new_user}")
                         success, msg = users.create_user(new_user, new_email, new_pw)
+                        print(f"create_user result: success={success}, msg={msg}")
                         if success:
                             st.success(msg + " Please sign in.")
                             st.session_state.show_signup = False
                             st.rerun()
                         else:
-                            st.error(msg)
+                            st.error(f"Error: {msg}")
+                            print(f"Signup error: {msg}")
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
