@@ -27,7 +27,7 @@ APP_NAME  = "ProfitPulse"
 # Placeholder - will be set after st is imported
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
-MODEL    = "qwen2.5-7b-instruct"
+MODEL    = "e2ee-qwen-2-5-7b-p"
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
