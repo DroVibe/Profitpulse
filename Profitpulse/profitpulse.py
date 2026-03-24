@@ -2387,13 +2387,6 @@ def render_sidebar() -> str:
             if st.button("📁 Data Input", use_container_width=True, key="qa_data"):
                 jump_to("Data Input")
         with qa2:
-        with qa2:
-            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
-                jump_to("AI Advisor")
-        with qa2:
-            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
-                jump_to("AI Advisor")
-        with qa2:
             if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
                 jump_to("AI Advisor")
         with qa3:
