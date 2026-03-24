@@ -56,22 +56,6 @@ def get_api_key():
             pass
     return key
 
-
-def get_supabase() -> Client:
-    """Get Supabase client from secrets."""
-    try:
-        import streamlit as st
-        url = os.environ.get("SUPABASE_URL") or (st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None)
-        key = os.environ.get("SUPABASE_KEY") or (st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None)
-    except Exception:
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_KEY")
-    
-    if not url or not key:
-        return None
-    
-    return create_client(url, key)
-
 BENCHMARKS = {
     "gross_margin_pct":         45.0,
     "labor_pct_of_revenue":     25.0,
@@ -690,20 +674,21 @@ def login_page() -> None:
                         st.rerun()
                     else:
                         st.error("Invalid credentials.")
-                st.markdown(
+            st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
                 "Demo: admin / pilot2026</p>",
                 unsafe_allow_html=True,
             )
         
         with tab_signup:
-                new_user = st.text_input("Username", placeholder="Choose a username", key="signup_user")
-                new_email = st.text_input("Email", placeholder="your@email.com", key="signup_email")
-                new_pw = st.text_input("Password", type="password", placeholder="Create password", key="signup_pw")
-                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password", key="signup_confirm")
-                
-                if st.button("Create Account", type="primary", use_container_width=True, key="signup_btn"):
-                    print(f"Button clicked: user={new_user}, email={new_email}")
+            with st.form("signup_form"):
+                new_user = st.text_input("Username", placeholder="Choose a username")
+                new_email = st.text_input("Email", placeholder="your@email.com")
+                new_pw = st.text_input("Password", type="password", placeholder="Create password")
+                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
+                if signup_submit:
                     if not new_user or not new_email or not new_pw:
                         st.error("Please fill in all fields.")
                     elif new_pw != confirm_pw:
@@ -711,17 +696,13 @@ def login_page() -> None:
                     elif len(new_pw) < 6:
                         st.error("Password must be at least 6 characters.")
                     else:
-                        print(f"Calling create_user for {new_user}")
                         success, msg = users.create_user(new_user, new_email, new_pw)
-                        print(f"create_user result: success={success}, msg={msg}")
                         if success:
                             st.success(msg + " Please sign in.")
                             st.session_state.show_signup = False
                             st.rerun()
                         else:
-                            st.error(f"Error: {msg}")
-                            print(f"Signup error: {msg}")
-
+                            st.error(msg)
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
@@ -1230,7 +1211,7 @@ def onboarding_wizard() -> None:
                 st.session_state.onboarding_step = None
                 st.rerun()
         with col2:
-                st.markdown("""
+            st.markdown("""
             **What you get with demo data:**
             - 6 months of sales, purchases, expenses & labor
             - Pre-populated P&L dashboard
@@ -1314,8 +1295,8 @@ def page_data_input() -> None:
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
             
-                st.markdown("---")
-                st.markdown("**Enter details from the receipt:**")
+            st.markdown("---")
+            st.markdown("**Enter details from the receipt:**")
             
             with st.form("receipt_expense_form", clear_on_submit=True):
                 r1, r2 = st.columns(2)
@@ -1651,7 +1632,7 @@ def page_dashboard() -> None:
     with st.expander("📊 See detailed breakdowns", expanded=False):
         ch3, ch4 = st.columns(2)
         with ch3:
-                st.markdown("##### Revenue by Category")
+            st.markdown("##### Revenue by Category")
             if pnl["rev_by_cat"]:
                 df_rc = pd.DataFrame(
                     list(pnl["rev_by_cat"].items()), columns=["Category", "Revenue"]
@@ -1667,7 +1648,7 @@ def page_dashboard() -> None:
                 st.caption("No sales data available.")
 
         with ch4:
-                st.markdown("##### Labor Cost by Employee")
+            st.markdown("##### Labor Cost by Employee")
             if pnl["labor_by_emp"]:
                 df_le = pd.DataFrame(
                     list(pnl["labor_by_emp"].items()), columns=["Employee", "Cost"]
@@ -1685,7 +1666,7 @@ def page_dashboard() -> None:
 
         # ── Operating Expenses breakdown ────────────
         if pnl["opex_by_cat"]:
-                st.markdown("##### Operating Expenses Breakdown")
+            st.markdown("##### Operating Expenses Breakdown")
             df_oc = pd.DataFrame(
                 list(pnl["opex_by_cat"].items()), columns=["Category", "Amount"]
             )
@@ -1815,12 +1796,12 @@ def page_overview() -> None:
 
         panel_a, panel_b, panel_c = st.columns(3)
         with panel_a:
-                st.markdown("##### 📊 Continue to Analytics")
+            st.markdown("##### 📊 Continue to Analytics")
             if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
                 jump_to("Analytics")
             st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
         with panel_b:
-                st.markdown("##### 🏛️ Continue to TaxShield")
+            st.markdown("##### 🏛️ Continue to TaxShield")
             if tax and complete:
                 if st.button("Open TaxShield →", use_container_width=True, key="overview_to_tax"):
                     jump_to("TaxShield")
@@ -1834,7 +1815,7 @@ def page_overview() -> None:
                     jump_to("Billing")
                 st.caption("Add data to calculate")
         with panel_c:
-                st.markdown("##### 💎 Plan benefits")
+            st.markdown("##### 💎 Plan benefits")
             if not complete:
                 if st.button("Compare plans →", use_container_width=True, key="overview_compare"):
                     jump_to("Billing")
@@ -2044,7 +2025,7 @@ def page_billing() -> None:
         if st.button("Upgrade to Complete", type="primary", key="upgrade_complete"):
             # Redirect to Stripe checkout
             checkout_url = "https://checkout.stripe.com/c/pay/cs_live_a1Pr3GEncQdYwOQ1LpU3bwBDGfhsazknQiyhbv1tSOyr5TNEiSHKxWfGFW"
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
             st.info("Redirecting to Stripe...")
         
         st.caption("Secure payment powered by Stripe")
@@ -2137,7 +2118,7 @@ def page_ai_chat() -> None:
     # ── Chat history display ─────────────────────
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+            st.markdown(msg["content"])
 
     # ── Input — quick button takes priority over typed input ──
     user_input = st.chat_input("Ask about margins, labor costs, breakeven, trends…")
@@ -2146,11 +2127,11 @@ def page_ai_chat() -> None:
     if query:
         st.session_state.chat_history.append({"role": "user", "content": query})
         with st.chat_message("user"):
-                st.markdown(query)
+            st.markdown(query)
         with st.chat_message("assistant"):
             with st.spinner("Analysing your numbers…"):
                 response = call_ai(query)
-                st.markdown(response)
+            st.markdown(response)
         st.session_state.chat_history.append({"role": "assistant", "content": response})
         st.rerun()
 
