@@ -2384,10 +2384,10 @@ def render_sidebar() -> str:
         
         qa1, qa2, qa3 = st.columns(3)
         with qa1:
-            if st.button("📁 Data", use_container_width=True, key="qa_data"):
+            if st.button("📁 Data Input", use_container_width=True, key="qa_data"):
                 jump_to("Data Input")
         with qa2:
-            if st.button("🤖 AI", use_container_width=True, key="qa_ai"):
+            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai"):
                 st.session_state.nav_page = "AI Advisor"
                 st.rerun()
         with qa3:
