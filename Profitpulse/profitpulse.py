@@ -697,15 +697,13 @@ def login_page() -> None:
             )
         
         with tab_signup:
-            with st.form("signup_form"):
-                new_user = st.text_input("Username", placeholder="Choose a username")
-                new_email = st.text_input("Email", placeholder="your@email.com")
-                new_pw = st.text_input("Password", type="password", placeholder="Create password")
-                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
-                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-                signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
-                if signup_submit:
-                    print(f"Form submitted: user={new_user}, email={new_email}")
+                new_user = st.text_input("Username", placeholder="Choose a username", key="signup_user")
+                new_email = st.text_input("Email", placeholder="your@email.com", key="signup_email")
+                new_pw = st.text_input("Password", type="password", placeholder="Create password", key="signup_pw")
+                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password", key="signup_confirm")
+                
+                if st.button("Create Account", type="primary", use_container_width=True, key="signup_btn"):
+                    print(f"Button clicked: user={new_user}, email={new_email}")
                     if not new_user or not new_email or not new_pw:
                         st.error("Please fill in all fields.")
                     elif new_pw != confirm_pw:
