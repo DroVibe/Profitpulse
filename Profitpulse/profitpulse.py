@@ -18,6 +18,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from openai import OpenAI
+from supabase import create_client, Client
 from fpdf import FPDF
 
 # ────────────────────────────────────────────────
@@ -54,6 +55,22 @@ def get_api_key():
         except Exception:
             pass
     return key
+
+
+def get_supabase() -> Client:
+    """Get Supabase client from secrets."""
+    try:
+        import streamlit as st
+        url = os.environ.get("SUPABASE_URL") or (st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None)
+        key = os.environ.get("SUPABASE_KEY") or (st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None)
+    except Exception:
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_KEY")
+    
+    if not url or not key:
+        return None
+    
+    return create_client(url, key)
 
 BENCHMARKS = {
     "gross_margin_pct":         45.0,

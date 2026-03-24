@@ -1567,3 +1567,25 @@ def page_dashboard() -> None:
             st.plotly_chart(fig, use_container_width=True)
 
 
+
+
+# ────────────────────────────────────────────────
+# MAIN ENTRY POINT
+# ────────────────────────────────────────────────
+def main():
+    # Page routing
+    page = st.sidebar.radio(
+        "Navigate",
+        ["Data Input", "Dashboard"],
+        index=0 if "page" not in st.session_state else (1 if st.session_state.page == "Dashboard" else 0),
+        key="page"
+    )
+    
+    if page == "Data Input":
+        page_data_input()
+    elif page == "Dashboard":
+        page_dashboard()
+
+
+if __name__ == "__main__":
+    main()
