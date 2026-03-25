@@ -593,6 +593,7 @@ def login_page() -> None:
                     if success:
                         st.success(msg + " Please sign in.")
                         st.session_state.show_signup = False
+                        st.rerun()
                     else:
                         st.error(msg)
 
@@ -1586,13 +1587,20 @@ def page_dashboard() -> None:
             fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
 
-
-
-
 # ────────────────────────────────────────────────
 # MAIN ENTRY POINT
 # ────────────────────────────────────────────────
 def main():
+    # Auth guard - redirect to login if not authenticated
+    if not st.session_state.get("authenticated", False):
+        login_page()
+        return
+
+    # Show onboarding wizard if not completed
+    if not st.session_state.get("onboarded", False):
+        onboarding_wizard()
+        return
+
     # Page routing
     page = st.sidebar.radio(
         "Navigate",
