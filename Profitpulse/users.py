@@ -79,7 +79,7 @@ def _init_sqlite():
 def create_user(username: str, email: str, password: str):
     """
     Create a new account.
-    Cloud → Supabase Auth.
+    Cloud → Supabase Auth + public users table (username as unique key).
     Local → SQLite.
     Returns (success: bool, message: str).
     """
@@ -88,12 +88,9 @@ def create_user(username: str, email: str, password: str):
     if sb is not None:
         # ── Cloud: Supabase Auth ──────────────────────────────────────────
         try:
-            # Check if email/username already taken
-            existing = sb.table("users").select("id").eq("email", email).execute()
+            # Check if username already taken
+            existing = sb.table("users").select("username").eq("username", username).execute()
             if existing.data:
-                return False, "Email already registered."
-            existing2 = sb.table("users").select("id").eq("username", username).execute()
-            if existing2.data:
                 return False, "Username already taken."
 
             # Sign up via Supabase Auth
@@ -105,14 +102,13 @@ def create_user(username: str, email: str, password: str):
             if auth_resp.user is None:
                 return False, "Signup failed. Please try again."
 
-            # Store in public users table
+            # Store in public users table (username as unique key, no 'id' column)
             sb.table("users").upsert({
-                "id":    auth_resp.user.id,
                 "username":  username,
                 "email":     email,
                 "tier":      "free",
                 "subscription_status": "inactive",
-            }, on_conflict="id").execute()
+            }, on_conflict="username").execute()
 
             return True, "Account created! Check your email to confirm, then sign in."
         except Exception as e:
@@ -146,7 +142,7 @@ def create_user(username: str, email: str, password: str):
 def verify_user(username: str, password: str):
     """
     Verify login credentials.
-    Cloud → Supabase Auth.
+    Cloud → Supabase Auth (username lookups only, no 'id' column).
     Local → SQLite.
     Returns (success: bool, user_data: dict|None).
     """
@@ -155,7 +151,7 @@ def verify_user(username: str, password: str):
     if sb is not None:
         # ── Cloud: Supabase Auth ──────────────────────────────────────────
         try:
-            # Get email for this username from users table
+            # Look up user by username (no 'id' column assumption)
             row = sb.table("users").select("*").eq("username", username).execute()
             if not row.data:
                 return False, None
@@ -171,7 +167,6 @@ def verify_user(username: str, password: str):
                 return False, None
 
             return True, {
-                "id":                 user_row.get("id", sess.user.id),
                 "username":           username,
                 "email":              sess.user.email,
                 "tier":               user_row.get("tier", "free"),
@@ -247,14 +242,7 @@ def update_tier(username: str, tier: str, stripe_customer_id: str | None = None)
 
 
 def save_user_setting(username: str, key: str, value: str) -> bool:
-    """Save a user setting (e.g. business_type)."""
-    user = get_user_by_username(username)
-    if not user:
-        return False
-    uid = user.get("id")
-    if not uid:
-        return False
-
+    """Save a user setting (e.g. business_type). Uses username as key for Supabase."""
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
@@ -269,24 +257,18 @@ def save_user_setting(username: str, key: str, value: str) -> bool:
         conn.close()
         return True
 
+    # Supabase path: use username as the unique identifier
     col = "business_type"
-    existing = sb.table("user_settings").select("user_id").eq("user_id", uid).execute()
+    existing = sb.table("user_settings").select("username").eq("username", username).execute()
     if existing.data:
-        sb.table("user_settings").update({col: value}).eq("user_id", uid).execute()
+        sb.table("user_settings").update({col: value}).eq("username", username).execute()
     else:
-        sb.table("user_settings").insert({"user_id": uid, col: value}).execute()
+        sb.table("user_settings").insert({"username": username, col: value}).execute()
     return True
 
 
 def load_user_setting(username: str, key: str) -> str | None:
-    """Load a user setting."""
-    user = get_user_by_username(username)
-    if not user:
-        return None
-    uid = user.get("id")
-    if not uid:
-        return None
-
+    """Load a user setting. Uses username as key for Supabase."""
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
@@ -300,7 +282,8 @@ def load_user_setting(username: str, key: str) -> str | None:
         conn.close()
         return row[0] if row else None
 
-    result = sb.table("user_settings").select(key).eq("user_id", uid).execute()
+    # Supabase path: use username
+    result = sb.table("user_settings").select(key).eq("username", username).execute()
     return result.data[0][key] if result.data else None
 
 
