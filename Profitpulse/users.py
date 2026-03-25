@@ -1,15 +1,21 @@
 """
 User management module for ProfitPulse.
-Cloud  → Supabase Auth (email+password, session-based).
+Cloud  → Supabase Auth (email+password).
 Local  → SQLite (simple file-based fallback).
-Returns DataFrames for data, dicts for user info.
+
+Design for Supabase:
+- auth.users  → Supabase Auth handles session and email identity
+- profiles   → minimal public table (username, email). Columns are created lazily.
+- user_<type>_<username> → per-user data tables (created on demand)
+
+RLS policies on the profiles table must allow authenticated inserts.
 """
 from __future__ import annotations
 
 import hashlib
 import os
 import sqlite3
-from datetime import datetime
+import sqlite3 as _sqlite3
 
 import pandas as pd
 
@@ -24,7 +30,6 @@ except ImportError:
 _supabase_client = None
 
 def _get_supabase():
-    """Get or create Supabase client. Returns Client or None."""
     global _supabase_client
     if not SUPABASE_AVAILABLE:
         return None
@@ -32,12 +37,8 @@ def _get_supabase():
         return _supabase_client
     try:
         import streamlit as st
-        url = os.environ.get("SUPABASE_URL") or (
-            st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None
-        )
-        key = os.environ.get("SUPABASE_KEY") or (
-            st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None
-        )
+        url  = os.environ.get("SUPABASE_URL")  or (st.secrets.get("SUPABASE_URL")  if hasattr(st, "secrets") else None)
+        key  = os.environ.get("SUPABASE_KEY")  or (st.secrets.get("SUPABASE_KEY")  if hasattr(st, "secrets") else None)
         if url and key:
             _supabase_client = create_client(url, key)
         return _supabase_client
@@ -51,7 +52,7 @@ def _salt_hash(password: str) -> str:
     return hashlib.sha256((password + "profitpulse2026").encode()).hexdigest()
 
 def _init_sqlite():
-    conn = sqlite3.connect(DB_PATH)
+    conn = _sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -60,7 +61,6 @@ def _init_sqlite():
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             tier TEXT DEFAULT 'free',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             stripe_customer_id TEXT,
             subscription_status TEXT DEFAULT 'inactive'
         )
@@ -74,24 +74,38 @@ def _init_sqlite():
     conn.commit()
     conn.close()
 
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _col_names(sb, table: str) -> set[str]:
+    """Return set of column names for a table, or empty set on failure."""
+    try:
+        r = sb.table(table).select("*").limit(1).execute()
+        if r.data:
+            return set(r.data[0].keys())
+    except Exception:
+        pass
+    return set()
+
+
 # ── Public Auth API ────────────────────────────────────────────────────────────
 
 def create_user(username: str, email: str, password: str):
     """
     Create a new account.
-    Cloud → Supabase Auth + public users table (username as unique key).
-    Local → SQLite.
     Returns (success: bool, message: str).
     """
     sb = _get_supabase()
 
     if sb is not None:
-        # ── Cloud: Supabase Auth ──────────────────────────────────────────
+        # ── Cloud path ─────────────────────────────────────────────────────
         try:
-            # Check if username already taken
-            existing = sb.table("users").select("username").eq("username", username).execute()
-            if existing.data:
-                return False, "Username already taken."
+            # Check username uniqueness
+            cols = _col_names(sb, "profiles")
+            if "username" in cols:
+                existing = sb.table("profiles").select("username").eq("username", username).execute()
+                if existing.data:
+                    return False, "Username already taken."
 
             # Sign up via Supabase Auth
             auth_resp = sb.auth.sign_up({
@@ -102,25 +116,31 @@ def create_user(username: str, email: str, password: str):
             if auth_resp.user is None:
                 return False, "Signup failed. Please try again."
 
-            # Store in public users table (username as unique key, no 'id' column)
-            sb.table("users").upsert({
-                "username":  username,
-                "email":     email,
-                "tier":      "free",
-                "subscription_status": "inactive",
-            }, on_conflict="username").execute()
+            # Upsert profile — build dict only with columns that exist
+            profile = {"username": username, "email": email}
+            if "tier" in cols:
+                profile["tier"] = "free"
+            if "subscription_status" in cols:
+                profile["subscription_status"] = "inactive"
+
+            try:
+                if "username" in cols:
+                    sb.table("profiles").upsert(profile, on_conflict="username").execute()
+            except Exception as e:
+                # Log but don't fail signup if profiles table has issues
+                print(f"Profile upsert warning: {e}")
 
             return True, "Account created! Check your email to confirm, then sign in."
         except Exception as e:
             err = str(e).lower()
-            if "already" in err or "unique" in err:
+            if "already" in err:
                 return False, "Username or email already taken."
             return False, f"Signup failed: {e}"
 
     else:
-        # ── Local: SQLite fallback ────────────────────────────────────────
+        # ── Local SQLite fallback ──────────────────────────────────────────
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
             c.execute(
@@ -129,10 +149,11 @@ def create_user(username: str, email: str, password: str):
             )
             conn.commit()
             return True, "Account created! Please sign in."
-        except sqlite3.IntegrityError as e:
-            if "username" in str(e):
+        except _sqlite3.IntegrityError as e:
+            msg = str(e)
+            if "username" in msg:
                 return False, "Username already taken."
-            elif "email" in str(e):
+            elif "email" in msg:
                 return False, "Email already registered."
             return False, "Registration failed."
         finally:
@@ -141,44 +162,56 @@ def create_user(username: str, email: str, password: str):
 
 def verify_user(username: str, password: str):
     """
-    Verify login credentials.
-    Cloud → Supabase Auth (username lookups only, no 'id' column).
-    Local → SQLite.
-    Returns (success: bool, user_data: dict|None).
+    Verify login credentials. Returns (success, user_data_dict|None).
     """
     sb = _get_supabase()
 
     if sb is not None:
-        # ── Cloud: Supabase Auth ──────────────────────────────────────────
-        try:
-            # Look up user by username (no 'id' column assumption)
-            row = sb.table("users").select("*").eq("username", username).execute()
-            if not row.data:
-                return False, None
-            user_row = row.data[0]
-            email = user_row.get("email", "")
+        # ── Cloud path ─────────────────────────────────────────────────────
+        # Find email for this username from profiles table
+        email = None
+        cols = _col_names(sb, "profiles")
+        if "username" in cols:
+            try:
+                rows = sb.table("profiles").select("email" if "email" in cols else "username").eq("username", username).execute()
+                if rows.data:
+                    # Try to get email from profiles — fall back to username if no email col
+                    row = rows.data[0]
+                    email = row.get("email") or (username + "@placeholder.invalid")
+            except Exception:
+                pass
 
-            # Authenticate with Supabase
-            sess = sb.auth.sign_in_with_password({
-                "email": email,
-                "password": password,
-            })
+        if not email:
+            return False, None
+
+        try:
+            sess = sb.auth.sign_in_with_password({"email": email, "password": password})
             if sess.user is None:
                 return False, None
-
+            # Get tier from profiles if available
+            tier = "free"
+            sub_status = "inactive"
+            if "username" in cols:
+                try:
+                    rows = sb.table("profiles").select("tier","subscription_status").eq("username", username).execute()
+                    if rows.data:
+                        tier = rows.data[0].get("tier", "free")
+                        sub_status = rows.data[0].get("subscription_status", "inactive")
+                except Exception:
+                    pass
             return True, {
-                "username":           username,
-                "email":              sess.user.email,
-                "tier":               user_row.get("tier", "free"),
-                "subscription_status": user_row.get("subscription_status", "inactive"),
+                "username": username,
+                "email":    sess.user.email,
+                "tier":     tier,
+                "subscription_status": sub_status,
             }
         except Exception:
             return False, None
 
     else:
-        # ── Local: SQLite fallback ────────────────────────────────────────
+        # ── Local SQLite fallback ──────────────────────────────────────────
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(
             "SELECT id, username, email, tier, subscription_status FROM users WHERE username=? AND password_hash=?",
@@ -195,11 +228,11 @@ def verify_user(username: str, password: str):
 
 
 def get_user_by_username(username: str) -> dict | None:
-    """Look up user row by username. Cloud + local."""
+    """Look up user by username."""
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(
             "SELECT id, username, email, tier, subscription_status FROM users WHERE username=?",
@@ -212,9 +245,15 @@ def get_user_by_username(username: str) -> dict | None:
                     "tier": row[3], "subscription_status": row[4]}
         return None
 
-    result = sb.table("users").select("*").eq("username", username).execute()
-    if result.data:
-        return result.data[0]
+    cols = _col_names(sb, "profiles")
+    if "username" not in cols:
+        return None
+    try:
+        result = sb.table("profiles").select("*").eq("username", username).execute()
+        if result.data:
+            return result.data[0]
+    except Exception:
+        pass
     return None
 
 
@@ -223,7 +262,7 @@ def update_tier(username: str, tier: str, stripe_customer_id: str | None = None)
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
         if stripe_customer_id:
             c.execute(
@@ -234,72 +273,86 @@ def update_tier(username: str, tier: str, stripe_customer_id: str | None = None)
             c.execute("UPDATE users SET tier=? WHERE username=?", (tier, username))
         conn.commit()
         conn.close()
-    else:
-        data = {"tier": tier, "subscription_status": "active"}
-        if stripe_customer_id:
+        return
+
+    cols = _col_names(sb, "profiles")
+    if "username" not in cols:
+        return
+    try:
+        data = {"tier": tier}
+        if stripe_customer_id and "stripe_customer_id" in cols:
             data["stripe_customer_id"] = stripe_customer_id
-        sb.table("users").update(data).eq("username", username).execute()
+        if "subscription_status" in cols:
+            data["subscription_status"] = "active"
+        sb.table("profiles").update(data).eq("username", username).execute()
+    except Exception:
+        pass
 
 
 def save_user_setting(username: str, key: str, value: str) -> bool:
-    """Save a user setting (e.g. business_type). Uses username as key for Supabase."""
+    """Save a user setting (e.g. business_type)."""
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
+        uid_row = c.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if not uid_row:
+            conn.close()
+            return False
+        uid = uid_row[0]
         c.execute(
-            "INSERT OR REPLACE INTO user_settings (user_id, business_type) "
-            "VALUES ((SELECT id FROM users WHERE username=?), ?)",
-            (username, value)
+            "INSERT OR REPLACE INTO user_settings (user_id, business_type) VALUES (?, ?)",
+            (uid, value)
         )
         conn.commit()
         conn.close()
         return True
 
-    # Supabase path: use username as the unique identifier
-    col = "business_type"
-    existing = sb.table("user_settings").select("username").eq("username", username).execute()
-    if existing.data:
-        sb.table("user_settings").update({col: value}).eq("username", username).execute()
-    else:
-        sb.table("user_settings").insert({"username": username, col: value}).execute()
+    cols = _col_names(sb, "profiles")
+    if "username" not in cols:
+        return True  # Silently skip
+    try:
+        sb.table("profiles").update({"business_type": value}).eq("username", username).execute()
+    except Exception:
+        pass
     return True
 
 
 def load_user_setting(username: str, key: str) -> str | None:
-    """Load a user setting. Uses username as key for Supabase."""
+    """Load a user setting."""
     sb = _get_supabase()
     if sb is None:
         _init_sqlite()
-        conn = sqlite3.connect(DB_PATH)
+        conn = _sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute(
-            f"SELECT {key} FROM user_settings WHERE user_id=(SELECT id FROM users WHERE username=?)",
-            (username,)
-        )
+        uid_row = c.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if not uid_row:
+            conn.close()
+            return None
+        uid = uid_row[0]
+        c.execute(f"SELECT {key} FROM user_settings WHERE user_id=?", (uid,))
         row = c.fetchone()
         conn.close()
         return row[0] if row else None
 
-    # Supabase path: use username
-    result = sb.table("user_settings").select(key).eq("username", username).execute()
-    return result.data[0][key] if result.data else None
+    cols = _col_names(sb, "profiles")
+    if "username" not in cols:
+        return None
+    try:
+        result = sb.table("profiles").select(key).eq("username", username).execute()
+        if result.data and key in result.data[0]:
+            return result.data[0][key]
+    except Exception:
+        pass
+    return None
 
 
 # ── Data storage helpers ───────────────────────────────────────────────────────
 
-def _get_uid(username: str) -> int | None:
-    """Get internal user id from username."""
-    user = get_user_by_username(username)
-    return user.get("id") if user else None
-
-
 def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     """
-    Persist a user's DataFrame (sales/purchases/expenses/labor) to storage.
-    Cloud → one Supabase table per user per type (e.g. sales_john).
-    Local → SQLite.
+    Persist a user's DataFrame. Cloud: per-type per-user table (e.g. sales_johndoe).
     """
     sb = _get_supabase()
     table_map = {
@@ -310,37 +363,43 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     }
     if data_type not in table_map:
         return False
-    records = df.to_dict("records") if df is not None else []
+
+    records = []
+    if df is not None:
+        for _, row in df.iterrows():
+            r = {k: v for k, v in row.to_dict().items() if k not in ("id", "user_id")}
+            r["username"] = username
+            records.append(r)
 
     if sb is not None:
         table_name = f"{data_type}_{username}"
         try:
             sb.table(table_name).delete().eq("username", username).execute()
         except Exception:
-            pass  # table may not exist yet
+            pass
         if records:
-            for r in records:
-                r["username"] = username
             try:
                 sb.table(table_name).insert(records).execute()
             except Exception:
-                pass  # table may not exist yet
+                pass
         return True
 
     # SQLite fallback
     _init_sqlite()
-    uid = _get_uid(username)
-    if not uid:
-        return False
-    conn = sqlite3.connect(DB_PATH)
+    conn = _sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    uid_row = c.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    if not uid_row:
+        conn.close()
+        return False
+    uid = uid_row[0]
     table = table_map[data_type]
     c.execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
-    for _, row in df.iterrows():
+    for r in records:
         c.execute(
             f"INSERT INTO {table} (user_id, date, category, amount, description) VALUES (?, ?, ?, ?, ?)",
-            (uid, str(row.get("date", "")), row.get("category", ""),
-             row.get("amount", 0), row.get("description", ""))
+            (uid, str(r.get("date", "")), r.get("category", ""),
+             r.get("amount", 0), r.get("description", ""))
         )
     conn.commit()
     conn.close()
@@ -349,8 +408,7 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
 
 def load_user_data(username: str, data_type: str) -> pd.DataFrame:
     """
-    Load a user's DataFrame from storage.
-    Always returns a pd.DataFrame (never None, never a list).
+    Load a user's DataFrame. Always returns pd.DataFrame.
     """
     sb = _get_supabase()
     table_map = {
@@ -368,24 +426,21 @@ def load_user_data(username: str, data_type: str) -> pd.DataFrame:
             result = sb.table(table_name).select("*").execute()
             if result.data:
                 df = pd.DataFrame(result.data)
-                for col in ("id", "user_id", "username"):
-                    if col in df.columns:
-                        df = df.drop(columns=[col])
-                return df
+                return df.drop(columns=["id", "user_id"], errors="ignore")
         except Exception:
             pass
         return pd.DataFrame()
 
     # SQLite fallback
     _init_sqlite()
-    uid = _get_uid(username)
-    if not uid:
+    conn = _sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    uid_row = c.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    if not uid_row:
+        conn.close()
         return pd.DataFrame()
+    uid = uid_row[0]
     table = table_map[data_type]
-    conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(f"SELECT * FROM {table} WHERE user_id=?", conn, params=(uid,))
     conn.close()
-    for col in ("id", "user_id"):
-        if col in df.columns:
-            df = df.drop(columns=[col])
-    return df
+    return df.drop(columns=["id", "user_id"], errors="ignore")
