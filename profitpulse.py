@@ -508,10 +508,6 @@ CHART_LAYOUT = dict(
 def login_page() -> None:
     import users  # User management module
 
-    # Flag to defer st.rerun() OUTSIDE the form (st.rerun inside form is deprecated in st 1.35+)
-    if "_pending_redirect" not in st.session_state:
-        st.session_state._pending_redirect = False
-
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown("""
@@ -535,40 +531,42 @@ def login_page() -> None:
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
         
         with tab_login:
-            with st.form("login_form"):
-                user = st.text_input("Username", placeholder="admin")
-                pw   = st.text_input("Password", type="password", placeholder="••••••••")
-                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-                submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
-                if submitted:
-                    # First check demo credentials
-                    valid_user = os.getenv("APP_USER", DEMO_USER)
-                    valid_pass = os.getenv("APP_PASS", DEMO_PASS)
-                    if user == valid_user and pw == valid_pass:
-                        st.session_state.authenticated = True
-                        st.session_state.username = user
-                        st.session_state.user_tier = "demo"
-                        initialize_demo_workspace()
-                        st.session_state._pending_redirect = True
-                    # Then check database users
+            def handle_login():
+                user = st.session_state.get("_login_user", "")
+                pw   = st.session_state.get("_login_pw", "")
+                valid_user = os.getenv("APP_USER", DEMO_USER)
+                valid_pass = os.getenv("APP_PASS", DEMO_PASS)
+                if user == valid_user and pw == valid_pass:
+                    st.session_state.authenticated = True
+                    st.session_state.username = user
+                    st.session_state.user_tier = "demo"
+                    initialize_demo_workspace()
+                else:
                     success, user_data = users.verify_user(user, pw)
                     if success:
                         st.session_state.authenticated = True
                         st.session_state.username = user
                         st.session_state.user_tier = user_data["tier"]
-                        # Load user's saved data from database
-                        st.session_state.df_sales = users.load_user_data(user, "sales")
-                        st.session_state.df_purchases = users.load_user_data(user, "purchases")
-                        st.session_state.df_expenses = users.load_user_data(user, "expenses")
-                        st.session_state.df_labor = users.load_user_data(user, "labor")
-                        # Load user's business type
+                        st.session_state.df_sales     = users.load_user_data(user, "sales")
+                        st.session_state.df_purchases  = users.load_user_data(user, "purchases")
+                        st.session_state.df_expenses   = users.load_user_data(user, "expenses")
+                        st.session_state.df_labor      = users.load_user_data(user, "labor")
                         biz_type = users.load_user_setting(user, "business_type")
                         if biz_type:
                             st.session_state.business_type = biz_type
                             st.session_state.onboarded = True
-                        st.session_state._pending_redirect = True
                     else:
-                        st.error("Invalid credentials.")
+                        st.session_state._login_error = "Invalid credentials."
+
+            login_form = st.form("login_form", on_submit=handle_login)
+            with login_form:
+                st.text_input("Username", placeholder="admin", key="_login_user")
+                st.text_input("Password", type="password", placeholder="••••••••", key="_login_pw")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                st.form_submit_button("Sign in", use_container_width=True, type="primary")
+
+            if "_login_error" in st.session_state:
+                st.error(st.session_state.pop("_login_error"))
             st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
                 "Demo: admin / pilot2026</p>",
@@ -576,38 +574,53 @@ def login_page() -> None:
             )
         
         with tab_signup:
-            with st.form("signup_form"):
-                new_user = st.text_input("Username", placeholder="Choose a username")
-                new_email = st.text_input("Email", placeholder="your@email.com")
-                new_pw = st.text_input("Password", type="password", placeholder="Create password")
-                confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
-                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-                signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
-                if signup_submit:
-                    if not new_user or not new_email or not new_pw:
-                        st.error("Please fill in all fields.")
-                    elif new_pw != confirm_pw:
-                        st.error("Passwords do not match.")
-                    elif len(new_pw) < 6:
-                        st.error("Password must be at least 6 characters.")
+            # on_submit callback fires BEFORE rerun — Streamlit handles the rerun automatically
+            def handle_signup():
+                # Read widget values via session state (mirrors what the form fields set)
+                import streamlit as st_local
+                new_user  = st_local.session_state.get("_signup_user", "")
+                new_email = st_local.session_state.get("_signup_email", "")
+                new_pw    = st_local.session_state.get("_signup_pw", "")
+                confirm   = st_local.session_state.get("_signup_confirm", "")
+
+                if not new_user or not new_email or not new_pw:
+                    st_local.session_state._signup_error = "Please fill in all fields."
+                elif new_pw != confirm:
+                    st_local.session_state._signup_error = "Passwords do not match."
+                elif len(new_pw) < 6:
+                    st_local.session_state._signup_error = "Password must be at least 6 characters."
+                else:
+                    success, msg = users.create_user(new_user, new_email, new_pw)
+                    if success:
+                        st_local.session_state.show_signup = False
+                        st_local.session_state._signup_success = msg + " Please sign in."
                     else:
-                        success, msg = users.create_user(new_user, new_email, new_pw)
-                        if success:
-                            st.success(msg + " Please sign in.")
-                            st.session_state.show_signup = False
-                            st.session_state._pending_redirect = True
-                        else:
-                            st.error(msg)
+                        st_local.session_state._signup_error = msg
+
+            signup_form = st.form("signup_form", on_submit=handle_signup)
+            with signup_form:
+                st.text_input("Username", placeholder="Choose a username",
+                              key="_signup_user")
+                st.text_input("Email", placeholder="your@email.com",
+                              key="_signup_email")
+                st.text_input("Password", type="password", placeholder="Create password",
+                              key="_signup_pw")
+                st.text_input("Confirm Password", type="password", placeholder="Confirm password",
+                              key="_signup_confirm")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                st.form_submit_button("Create Account", use_container_width=True, type="primary")
+
+            # Show feedback messages (persist across reruns)
+            if "_signup_error" in st.session_state:
+                st.error(st.session_state.pop("_signup_error"))
+            if "_signup_success" in st.session_state:
+                st.success(st.session_state.pop("_signup_success"))
+
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#a0a0a0;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
-
-    # Deferred redirect — MUST be outside st.form blocks (st.rerun inside form is deprecated)
-    if st.session_state._pending_redirect:
-        st.session_state._pending_redirect = False
-        st.rerun()
 
 
 def logout() -> None:
