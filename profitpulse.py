@@ -545,6 +545,7 @@ def login_page() -> None:
                     st.session_state.authenticated = True
                     st.session_state.username = user
                     st.session_state.user_tier = "demo"
+                    _ensure_dfs()
                     initialize_demo_workspace()
                     st.rerun()
                 else:
@@ -728,12 +729,17 @@ def initialize_demo_workspace() -> None:
     if not st.session_state.business_type:
         st.session_state.business_type = "Auto Repair"
 
+    # Guard: ensure df_* are DataFrames before calling .empty
+    for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
+        if key not in st.session_state or not isinstance(st.session_state[key], pd.DataFrame):
+            st.session_state[key] = pd.DataFrame()
+
     if st.session_state.df_sales.empty:
         demo = generate_demo_data(6, st.session_state.business_type)
-        st.session_state.df_sales = demo["sales"]
+        st.session_state.df_sales     = demo["sales"]
         st.session_state.df_purchases = demo["purchases"]
-        st.session_state.df_expenses = demo["expenses"]
-        st.session_state.df_labor = demo["labor"]
+        st.session_state.df_expenses   = demo["expenses"]
+        st.session_state.df_labor      = demo["labor"]
 
     st.session_state.onboarded = True
     st.session_state.onboarding_step = None
@@ -1052,6 +1058,13 @@ def _ai_pulse_prompt() -> str:
 # ────────────────────────────────────────────────
 # ONBOARDING WIZARD
 # ────────────────────────────────────────────────
+def _ensure_dfs() -> None:
+    """Ensure all df_* session state vars are DataFrames (guards against type mismatch)."""
+    for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
+        val = st.session_state.get(key)
+        if not isinstance(val, pd.DataFrame):
+            st.session_state[key] = pd.DataFrame()
+
 def onboarding_wizard() -> None:
     st.markdown("""
     <div style="text-align:center; padding:4rem 1rem 2rem;">
@@ -1121,6 +1134,7 @@ def page_data_input() -> None:
         '<div class="page-sub">Upload CSVs, add transactions manually, or load demo data</div>',
         unsafe_allow_html=True,
     )
+    _ensure_dfs()
 
     biz = st.session_state.business_type or "Auto Repair"
     if st.session_state.business_type:
@@ -1327,6 +1341,7 @@ def page_data_input() -> None:
 # NEW: Recalculate button, last-updated timestamp, What-If simulator
 # ────────────────────────────────────────────────
 def page_dashboard() -> None:
+    _ensure_dfs()
     if st.session_state.df_sales.empty:
         st.info("No data loaded yet. Head to **Data Input** or load the demo.")
         return
