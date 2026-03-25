@@ -507,7 +507,11 @@ CHART_LAYOUT = dict(
 # ────────────────────────────────────────────────
 def login_page() -> None:
     import users  # User management module
-    
+
+    # Flag to defer st.rerun() OUTSIDE the form (st.rerun inside form is deprecated in st 1.35+)
+    if "_pending_redirect" not in st.session_state:
+        st.session_state._pending_redirect = False
+
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
         st.markdown("""
@@ -545,7 +549,7 @@ def login_page() -> None:
                         st.session_state.username = user
                         st.session_state.user_tier = "demo"
                         initialize_demo_workspace()
-                        st.rerun()
+                        st.session_state._pending_redirect = True
                     # Then check database users
                     success, user_data = users.verify_user(user, pw)
                     if success:
@@ -562,7 +566,7 @@ def login_page() -> None:
                         if biz_type:
                             st.session_state.business_type = biz_type
                             st.session_state.onboarded = True
-                        st.rerun()
+                        st.session_state._pending_redirect = True
                     else:
                         st.error("Invalid credentials.")
             st.markdown(
@@ -591,7 +595,7 @@ def login_page() -> None:
                         if success:
                             st.success(msg + " Please sign in.")
                             st.session_state.show_signup = False
-                            st.rerun()
+                            st.session_state._pending_redirect = True
                         else:
                             st.error(msg)
             st.markdown(
@@ -599,6 +603,11 @@ def login_page() -> None:
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
                 unsafe_allow_html=True,
             )
+
+    # Deferred redirect — MUST be outside st.form blocks (st.rerun inside form is deprecated)
+    if st.session_state._pending_redirect:
+        st.session_state._pending_redirect = False
+        st.rerun()
 
 
 def logout() -> None:
