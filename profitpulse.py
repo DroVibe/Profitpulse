@@ -523,7 +523,11 @@ def login_page() -> None:
         # Toggle between Login and Signup
         if "show_signup" not in st.session_state:
             st.session_state.show_signup = False
-        
+
+        # Deep-link: ?page=signup opens Create Account tab by default
+        if st.query_params.get("page") == "signup":
+            st.session_state.show_signup = True
+
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
         
         with tab_login:
