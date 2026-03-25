@@ -1,5 +1,5 @@
 # ============================================================
-# ProfitPulse — AI-Powered Business Analytics Dashboard
+# ProfitPulse - AI-Powered Business Analytics Dashboard
 # Polished & Production-Ready | February 2026
 # Updated: March 2026 - ScaleStack color palette sync (dark-only theme)
 # ============================================================
@@ -74,7 +74,7 @@ BUSINESS_TYPES = [
 ]
 
 # ────────────────────────────────────────────────
-# PAGE CONFIG — must be first st.* call
+# PAGE CONFIG - must be first st.* call
 # ────────────────────────────────────────────────
 st.set_page_config(
     page_title="ProfitPulse",
@@ -241,7 +241,7 @@ st.markdown("""
   @media (max-width: 768px) {
     .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
     .pp-card .value  { font-size: 1.35rem; }
-    
+
     /* Smooth slider interaction on mobile */
     input[type="range"] {
       -webkit-tap-highlight-color: transparent;
@@ -265,13 +265,13 @@ st.markdown("""
     input[type="range"]:focus::-webkit-slider-thumb {
       box-shadow: 0 0 0 4px rgba(99,102,241,0.3);
     }
-    
+
     /* Better touch targets */
     .stButton > button {
       min-height: 48px;
       padding: 12px 20px;
     }
-    
+
     /* Fluid sidebar */
     section[data-testid="stSidebar"] {
       width: 85vw !important;
@@ -519,7 +519,7 @@ def login_page() -> None:
             </p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Toggle between Login and Signup
         if "show_signup" not in st.session_state:
             st.session_state.show_signup = False
@@ -529,11 +529,16 @@ def login_page() -> None:
             st.session_state.show_signup = True
 
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
-        
+
         with tab_login:
-            def handle_login():
-                user = st.session_state.get("_login_user", "")
-                pw   = st.session_state.get("_login_pw", "")
+            with st.form("login_form", clear_on_submit=False):
+                user = st.text_input("Username", placeholder="admin")
+                pw   = st.text_input("Password", type="password", placeholder="••••••••")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
+
+            # Handle AFTER form block — safe from Streamlit form rerun issues
+            if submitted:
                 valid_user = os.getenv("APP_USER", DEMO_USER)
                 valid_pass = os.getenv("APP_PASS", DEMO_PASS)
                 if user == valid_user and pw == valid_pass:
@@ -541,6 +546,7 @@ def login_page() -> None:
                     st.session_state.username = user
                     st.session_state.user_tier = "demo"
                     initialize_demo_workspace()
+                    st.rerun()
                 else:
                     success, user_data = users.verify_user(user, pw)
                     if success:
@@ -555,66 +561,39 @@ def login_page() -> None:
                         if biz_type:
                             st.session_state.business_type = biz_type
                             st.session_state.onboarded = True
+                        st.rerun()
                     else:
-                        st.session_state._login_error = "Invalid credentials."
+                        st.error("Invalid credentials.")
 
-            login_form = st.form("login_form", on_submit=handle_login)
-            with login_form:
-                st.text_input("Username", placeholder="admin", key="_login_user")
-                st.text_input("Password", type="password", placeholder="••••••••", key="_login_pw")
-                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-                st.form_submit_button("Sign in", use_container_width=True, type="primary")
-
-            if "_login_error" in st.session_state:
-                st.error(st.session_state.pop("_login_error"))
             st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
                 "Demo: admin / pilot2026</p>",
                 unsafe_allow_html=True,
             )
-        
-        with tab_signup:
-            # on_submit callback fires BEFORE rerun — Streamlit handles the rerun automatically
-            def handle_signup():
-                # Read widget values via session state (mirrors what the form fields set)
-                import streamlit as st_local
-                new_user  = st_local.session_state.get("_signup_user", "")
-                new_email = st_local.session_state.get("_signup_email", "")
-                new_pw    = st_local.session_state.get("_signup_pw", "")
-                confirm   = st_local.session_state.get("_signup_confirm", "")
 
+        with tab_signup:
+            with st.form("signup_form", clear_on_submit=False):
+                new_user  = st.text_input("Username", placeholder="Choose a username")
+                new_email = st.text_input("Email", placeholder="your@email.com")
+                new_pw    = st.text_input("Password", type="password", placeholder="Create password")
+                confirm   = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
+                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+                signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
+
+            if signup_submit:
                 if not new_user or not new_email or not new_pw:
-                    st_local.session_state._signup_error = "Please fill in all fields."
+                    st.error("Please fill in all fields.")
                 elif new_pw != confirm:
-                    st_local.session_state._signup_error = "Passwords do not match."
+                    st.error("Passwords do not match.")
                 elif len(new_pw) < 6:
-                    st_local.session_state._signup_error = "Password must be at least 6 characters."
+                    st.error("Password must be at least 6 characters.")
                 else:
                     success, msg = users.create_user(new_user, new_email, new_pw)
                     if success:
-                        st_local.session_state.show_signup = False
-                        st_local.session_state._signup_success = msg + " Please sign in."
+                        st.success(msg + " Please sign in.")
+                        st.session_state.show_signup = False
                     else:
-                        st_local.session_state._signup_error = msg
-
-            signup_form = st.form("signup_form", on_submit=handle_signup)
-            with signup_form:
-                st.text_input("Username", placeholder="Choose a username",
-                              key="_signup_user")
-                st.text_input("Email", placeholder="your@email.com",
-                              key="_signup_email")
-                st.text_input("Password", type="password", placeholder="Create password",
-                              key="_signup_pw")
-                st.text_input("Confirm Password", type="password", placeholder="Confirm password",
-                              key="_signup_confirm")
-                st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-                st.form_submit_button("Create Account", use_container_width=True, type="primary")
-
-            # Show feedback messages (persist across reruns)
-            if "_signup_error" in st.session_state:
-                st.error(st.session_state.pop("_signup_error"))
-            if "_signup_success" in st.session_state:
-                st.success(st.session_state.pop("_signup_success"))
+                        st.error(msg)
 
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#a0a0a0;margin-top:1rem;'>"
@@ -631,7 +610,7 @@ def logout() -> None:
 
 
 # ────────────────────────────────────────────────
-# DEMO DATA  (@st.cache_data — deterministic, safe to cache by args)
+# DEMO DATA  (@st.cache_data - deterministic, safe to cache by args)
 # ADDED: Restaurant profile; cleaner profile dict structure
 # ────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
@@ -917,7 +896,7 @@ def build_data_context() -> str:
 
     biz = st.session_state.business_type or "Small Business"
     ctx = (
-        f"=== {biz.upper()} — P&L SNAPSHOT ===\n"
+        f"=== {biz.upper()} - P&L SNAPSHOT ===\n"
         f"Period: {pnl.get('date_range_days',0)} days  |  "
         f"Daily Avg Revenue: ${pnl.get('daily_avg_revenue',0):,.2f}\n\n"
         f"REVENUE:            ${pnl['total_revenue']:,.2f}\n"
@@ -960,13 +939,13 @@ def build_data_context() -> str:
     return ctx
 
 
-SYSTEM_PROMPT = """You are ProfitPulse AI — a plain-speaking virtual CFO for small businesses.
+SYSTEM_PROMPT = """You are ProfitPulse AI - a plain-speaking virtual CFO for small businesses.
 
 RULES:
 1. Use ACTUAL numbers from the user's data. Never invent figures.
 2. Compare metrics to the provided benchmarks; flag deviations clearly.
 3. Give specific, actionable recommendations with estimated dollar impact.
-4. Use short bullets or numbered steps — no walls of text.
+4. Use short bullets or numbered steps - no walls of text.
 5. Gross margin below 40% = critical: suggest pricing or sourcing fixes.
 6. Labor above 25% of revenue = flag: suggest scheduling or staffing tweaks.
 7. Overtime: quantify extra cost vs. hiring part-time help.
@@ -982,12 +961,12 @@ def save_all_user_data():
     username = st.session_state.get("username", "")
     if not username or username == "admin":
         return  # Don't save demo data
-    
+
     user_db.save_user_data(username, "sales", st.session_state.df_sales)
     user_db.save_user_data(username, "purchases", st.session_state.df_purchases)
     user_db.save_user_data(username, "expenses", st.session_state.df_expenses)
     user_db.save_user_data(username, "labor", st.session_state.df_labor)
-    
+
     # Save business type
     if st.session_state.get("business_type"):
         user_db.save_user_setting(username, "business_type", st.session_state.business_type)
@@ -1088,7 +1067,7 @@ def onboarding_wizard() -> None:
     st.progress((step + 1) / 2, text=f"Step {step + 1} of 2")
 
     if step == 0:
-        st.markdown("### Step 1 — What kind of business do you run?")
+        st.markdown("### Step 1 - What kind of business do you run?")
         biz_type = st.selectbox(
             "Business Type", BUSINESS_TYPES, index=0,
             help="Tailors demo data and AI advice to your industry.",
@@ -1100,14 +1079,14 @@ def onboarding_wizard() -> None:
 
     elif step == 1:
         biz = st.session_state.business_type
-        st.markdown(f"### Step 2 — Load data for your **{biz}**")
+        st.markdown(f"### Step 2 - Load data for your **{biz}**")
         col1, col2 = st.columns([3, 2])
         with col1:
             st.info(
                 f"Load **6 months of realistic {biz} demo data** "
                 "so you can explore the full dashboard right away?"
             )
-            if st.button("✅ Yes — Load Demo Data", type="primary", use_container_width=True):
+            if st.button("✅ Yes - Load Demo Data", type="primary", use_container_width=True):
                 with st.spinner("Generating demo data…"):
                     demo = generate_demo_data(6, biz)
                     st.session_state.df_sales     = demo["sales"]
@@ -1117,9 +1096,9 @@ def onboarding_wizard() -> None:
                     save_all_user_data()
                 st.session_state.onboarded        = True
                 st.session_state.onboarding_step  = None
-                st.toast("Demo data loaded — welcome to ProfitPulse! 🎉", icon="✅")
+                st.toast("Demo data loaded - welcome to ProfitPulse! 🎉", icon="✅")
                 st.rerun()
-            if st.button("📁 No thanks — I'll upload my own data", use_container_width=True):
+            if st.button("📁 No thanks - I'll upload my own data", use_container_width=True):
                 st.session_state.onboarded       = True
                 st.session_state.onboarding_step = None
                 st.rerun()
@@ -1193,39 +1172,39 @@ def page_data_input() -> None:
     # ── Receipt Scanner ─────────────────────────
     st.markdown("##### 📷 Add from Receipt")
     st.caption("Upload a receipt photo from your phone or computer, then add to expenses")
-    
+
     with st.expander("Open Receipt Scanner", expanded=False):
         uploaded_file = st.file_uploader(
             "Upload receipt (photo or PDF)",
             type=["png", "jpg", "jpeg", "pdf"],
             help="Take a photo of your receipt and upload it here"
         )
-        
+
         if uploaded_file is not None:
             # Show preview if image
             if uploaded_file.type.startswith("image/"):
                 st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
-            
+
             st.markdown("---")
             st.markdown("**Enter details from the receipt:**")
-            
+
             with st.form("receipt_expense_form", clear_on_submit=True):
                 r1, r2 = st.columns(2)
                 with r1:
                     rec_vendor = st.text_input("Vendor / Store", placeholder="e.g., Home Depot, Starbucks")
                 with r2:
                     rec_date = st.date_input("Date", value=datetime.date.today())
-                
+
                 r3, r4 = st.columns(2)
                 with r3:
                     rec_amount = st.number_input("Total Amount ($)", min_value=0.0, step=0.01)
                 with r4:
                     rec_category = st.selectbox("Category", EXPENSE_CATEGORIES)
-                
+
                 rec_desc = st.text_input("Description (optional)", placeholder="What was this for?")
-                
+
                 if st.form_submit_button("💾 Save to Expenses", type="primary", use_container_width=True):
                     if rec_amount <= 0:
                         st.warning("Please enter a valid amount")
@@ -1234,21 +1213,21 @@ def page_data_input() -> None:
                         desc_text = f"Receipt: {rec_vendor}"
                         if rec_desc:
                             desc_text += f" - {rec_desc}"
-                        
+
                         row = pd.DataFrame([{
                             "date": str(rec_date),
                             "category": rec_category,
                             "amount": rec_amount,
                             "description": desc_text
                         }])
-                        
+
                         # Append to expenses
                         if st.session_state.df_expenses.empty:
                             st.session_state.df_expenses = row
                         else:
                             st.session_state.df_expenses = pd.concat(
                                 [st.session_state.df_expenses, row], ignore_index=True)
-                        
+
                         save_all_user_data()
                         st.toast(f"Receipt saved: {rec_vendor} - ${rec_amount:,.2f}", icon="✅")
                         st.rerun()
@@ -1359,7 +1338,7 @@ def page_dashboard() -> None:
         st.markdown('<div class="page-header">Analytics</div>', unsafe_allow_html=True)
         st.markdown(
             f'<div class="page-sub">Welcome back, <strong>{biz_label}</strong>'
-            f' — your deeper business performance workspace</div>',
+            f' - your deeper business performance workspace</div>',
             unsafe_allow_html=True,
         )
     with ts_col:
@@ -1382,7 +1361,7 @@ def page_dashboard() -> None:
             pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"],
             pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]
         ] if k]))
-        
+
         col_idx = 0
         if pnl["net_profit"] > 0:
             with cols[col_idx]: st.metric("Status", "✅ Profitable")
@@ -1390,19 +1369,19 @@ def page_dashboard() -> None:
         elif pnl["net_profit"] < 0:
             with cols[col_idx]: st.metric("Status", "⚠️ At a loss")
             col_idx += 1
-        
+
         if pnl["rev_by_cat"]:
             top_cat = max(pnl["rev_by_cat"].items(), key=lambda x: x[1])
             with cols[col_idx]: st.metric("Top Category", top_cat[0])
             col_idx += 1
-        
+
         if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
             with cols[col_idx]: st.metric("Margin", f"⚠️ {pnl['gross_margin_pct']:.1f}%")
             col_idx += 1
-        
+
         if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
             with cols[col_idx]: st.metric("Labor", f"⚠️ {pnl['labor_pct']:.1f}%")
-        
+
         st.markdown("---")
 
     # ── KPI Cards ───────────────────────────────
@@ -1431,30 +1410,30 @@ def page_dashboard() -> None:
     if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
         pp_alert(
             f"⚠ Gross margin {pnl['gross_margin_pct']:.1f}% is below the "
-            f"{BENCHMARKS['gross_margin_pct']}% benchmark — review pricing or COGS.", "warn"
+            f"{BENCHMARKS['gross_margin_pct']}% benchmark - review pricing or COGS.", "warn"
         )
     if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
         pp_alert(
             f"⚠ Labor at {pnl['labor_pct']:.1f}% of revenue exceeds the "
-            f"{BENCHMARKS['labor_pct_of_revenue']}% target — review scheduling.", "warn"
+            f"{BENCHMARKS['labor_pct_of_revenue']}% target - review scheduling.", "warn"
         )
     if pnl["overtime_count"] > 0:
         # Rough overtime premium estimate: flag the extra cost
         ot_est = pnl["total_labor"] * (pnl["overtime_pct"] / 100) * 0.5
         pp_alert(
-            f"🔴 {pnl['overtime_count']} overtime shifts ({pnl['overtime_pct']:.1f}%) — "
+            f"🔴 {pnl['overtime_count']} overtime shifts ({pnl['overtime_pct']:.1f}%) - "
             f"estimated extra cost ~${ot_est:,.0f}. Consider adjusting shift schedules.", "bad"
         )
     if pnl["net_margin_pct"] < 5:
         pp_alert(
-            f"🔴 Net margin critically low at {pnl['net_margin_pct']:.1f}% — "
+            f"🔴 Net margin critically low at {pnl['net_margin_pct']:.1f}% - "
             "immediate action required on costs or pricing.", "bad"
         )
 
     st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
 
     # ── What-If Simulator ───────────────────────
-    with st.expander("🔮 What-If Simulator — Test Scenarios", expanded=False):
+    with st.expander("🔮 What-If Simulator - Test Scenarios", expanded=False):
         st.caption("Adjust sliders to model the profit impact of business changes.")
         colA, colB, colC = st.columns(3)
         with colA:
@@ -1487,7 +1466,7 @@ def page_dashboard() -> None:
     with st.expander("📋 Profit & Loss Statement", expanded=True):
         rev = pnl["total_revenue"]
         def pct_of_rev(v: float) -> str:
-            return f"{(v / rev * 100):.1f}%" if rev > 0 else "—"
+            return f"{(v / rev * 100):.1f}%" if rev > 0 else "-"
 
         pnl_row("Revenue",             rev,                   "100.0%")
         pnl_row("Cost of Goods Sold",  -pnl["total_cogs"],    pct_of_rev(pnl["total_cogs"]))
@@ -1541,7 +1520,7 @@ def page_dashboard() -> None:
         else:
             st.caption("More data needed for this chart.")
 
-    # ── Charts row 2 — Hidden behind expander ──
+    # ── Charts row 2 - Hidden behind expander ──
     with st.expander("📊 See detailed breakdowns", expanded=False):
         ch3, ch4 = st.columns(2)
         with ch3:
@@ -1606,7 +1585,7 @@ def main():
         index=0 if "page" not in st.session_state else (1 if st.session_state.page == "Dashboard" else 0),
         key="page"
     )
-    
+
     if page == "Data Input":
         page_data_input()
     elif page == "Dashboard":
