@@ -532,8 +532,8 @@ def login_page() -> None:
 
         with tab_login:
             with st.form("login_form", clear_on_submit=False):
-                user = st.text_input("Username", placeholder="admin")
-                pw   = st.text_input("Password", type="password", placeholder="••••••••")
+                login_email = st.text_input("Email", placeholder="your@email.com")
+                login_pw    = st.text_input("Password", type="password", placeholder="••••••••")
                 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
 
@@ -541,24 +541,25 @@ def login_page() -> None:
             if submitted:
                 valid_user = os.getenv("APP_USER", DEMO_USER)
                 valid_pass = os.getenv("APP_PASS", DEMO_PASS)
-                if user == valid_user and pw == valid_pass:
+                if login_email == valid_user and login_pw == valid_pass:
                     st.session_state.authenticated = True
-                    st.session_state.username = user
+                    st.session_state.username = valid_user
                     st.session_state.user_tier = "demo"
                     _ensure_dfs()
                     initialize_demo_workspace()
                     st.rerun()
                 else:
-                    success, user_data = users.verify_user(user, pw)
+                    success, user_data = users.verify_user(login_email, login_pw)
                     if success:
                         st.session_state.authenticated = True
-                        st.session_state.username = user
-                        st.session_state.user_tier = user_data["tier"]
-                        st.session_state.df_sales     = users.load_user_data(user, "sales")
-                        st.session_state.df_purchases  = users.load_user_data(user, "purchases")
-                        st.session_state.df_expenses   = users.load_user_data(user, "expenses")
-                        st.session_state.df_labor      = users.load_user_data(user, "labor")
-                        biz_type = users.load_user_setting(user, "business_type")
+                        st.session_state.username = user_data.get("username") or user_data.get("email", "").split("@")[0]
+                        st.session_state.user_tier = user_data.get("tier", "free")
+                        username = st.session_state.username
+                        st.session_state.df_sales     = users.load_user_data(username, "sales")
+                        st.session_state.df_purchases  = users.load_user_data(username, "purchases")
+                        st.session_state.df_expenses   = users.load_user_data(username, "expenses")
+                        st.session_state.df_labor      = users.load_user_data(username, "labor")
+                        biz_type = users.load_user_setting(username, "business_type")
                         if biz_type:
                             st.session_state.business_type = biz_type
                             st.session_state.onboarded = True
