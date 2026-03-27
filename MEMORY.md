@@ -51,3 +51,26 @@
 - Preserve business/project context first.
 - Remove stale trading history before sacrificing current project context.
 ## Workflow Notes
+
+## Session: 2026-03-27 (Afternoon)
+
+### ScaleStack Launch Pipeline — Major Progress
+- **Auth bug fixed**: `verify_user()` now searches by email (not username column). Login field label updated to "Email". Fix committed + pushed to ProfitPulse repo.
+- **GitHub push**: Switched from HTTPS (token auth) to SSH — `~/.ssh/id_ed25519` is the working auth method. Remote now `git@github.com:DroVibe/profitpulse.git`. SSH key is pre-authenticated; no token needed going forward.
+- **Stripe webhook built**: `scalestack-landing/api/webhook.js` — handles `checkout.session.completed`, verifies signature, adds email to Supabase `allowlist` table, fires Resend welcome email.
+- **Allowlist SQL run**: Supabase `allowlist` table created (email, stripe_customer_id, tier, granted_at, active).
+- **4 env vars set in Vercel**: STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
+- **Stripe webhook endpoint registered** via Grok-assisted Stripe UI navigation.
+- Resend API key created (sending access, domain: scalestack.io).
+
+### Remaining Steps
+1. DNS pointing: scalestack.io → Vercel
+2. Resend domain verification: add DNS record for scalestack.io
+3. Full end-to-end test: sandbox mode → checkout → webhook → email
+4. ProfitPulse account creation still has edge cases (ongoing)
+
+### GitHub / SSH Notes
+- SSH key at `~/.ssh/id_ed25519` — valid and already authenticated with GitHub
+- ProfitPulse remote: `git@github.com:DroVibe/profitpulse.git`
+- scalestack-landing remote: `git@github.com:DroVibe/scalestack-landing.git`
+- On push failure: check if remote is HTTPS vs SSH; switch with `git remote set-url origin git@github.com:owner/repo.git`
