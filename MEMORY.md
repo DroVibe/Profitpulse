@@ -67,7 +67,7 @@
 1. DNS pointing: scalestack.io → Vercel
 2. Resend domain verification: add DNS record for scalestack.io
 3. Full end-to-end test: sandbox mode → checkout → webhook → email
-4. ProfitPulse account creation still has edge cases (ongoing)
+4. **ProfitPulse account creation still broken** — signup form submits but account isn't created. `verify_user()` fix addressed login; signup flow (`users.create_user`) needs debugging. Likely the Supabase Auth sign-up isn't completing or the users table isn't being written.
 
 ### GitHub / SSH Notes
 - SSH key at `~/.ssh/id_ed25519` — valid and already authenticated with GitHub
