@@ -662,7 +662,7 @@ def login_page() -> None:
 
         with tab_login:
             with st.form("login_form", clear_on_submit=False):
-                user = st.text_input("Username", placeholder="admin")
+                user = st.text_input("Email", placeholder="your@email.com")
                 pw   = st.text_input("Password", type="password", placeholder="••••••••")
                 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
@@ -702,7 +702,7 @@ def login_page() -> None:
 
             st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
-                "Demo: admin / pilot2026</p>",
+                "Demo: admin@pilot.com / pilot2026</p>",
                 unsafe_allow_html=True,
             )
         
