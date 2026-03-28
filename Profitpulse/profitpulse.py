@@ -650,7 +650,16 @@ def login_page() -> None:
             st.session_state.show_signup = False
         
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
-        
+
+        # After signup success + rerun, show success message on login tab
+        if st.session_state.get("just_signed_up"):
+            st.session_state["just_signed_up"] = False
+            st.session_state["_show_signup_success"] = True
+
+        if st.session_state.get("_show_signup_success"):
+            st.session_state["_show_signup_success"] = False
+            st.success("Account created! Sign in with your credentials.")
+
         with tab_login:
             with st.form("login_form", clear_on_submit=False):
                 user = st.text_input("Username", placeholder="admin")
@@ -717,7 +726,8 @@ def login_page() -> None:
                 else:
                     success, msg = users.create_user(new_user, new_email, new_pw)
                     if success:
-                        st.success(msg + " Please sign in.")
+                        # Set flag BEFORE rerun so login tab shows message after reload
+                        st.session_state.just_signed_up = True
                         st.session_state.show_signup = False
                         st.rerun()
                     else:
