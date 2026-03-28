@@ -490,6 +490,14 @@ def init_state() -> None:
 init_state()
 
 
+def _ensure_dfs() -> None:
+    """Ensure all df_* session state vars are DataFrames (guards against type mismatch)."""
+    for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
+        val = st.session_state.get(key)
+        if not isinstance(val, pd.DataFrame):
+            st.session_state[key] = pd.DataFrame()
+
+
 # ────────────────────────────────────────────────
 # UI COMPONENT HELPERS
 # ────────────────────────────────────────────────
@@ -599,8 +607,12 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
-    # Simply set the page - selectbox will pick it up on next render
+    # Save pending nav BEFORE rerun so sidebar can read it
+    st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
+    # Clear the nav_select widget key so sidebar selectbox uses our index
+    if "nav_select" in st.session_state:
+        del st.session_state["nav_select"]
     st.rerun()
 
 
@@ -640,22 +652,26 @@ def login_page() -> None:
         tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
         
         with tab_login:
-            with st.form("login_form"):
+            with st.form("login_form", clear_on_submit=False):
                 user = st.text_input("Username", placeholder="admin")
                 pw   = st.text_input("Password", type="password", placeholder="••••••••")
                 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Sign in", use_container_width=True, type="primary")
-                if submitted:
-                    # First check demo credentials
-                    valid_user = os.getenv("APP_USER", DEMO_USER)
-                    valid_pass = os.getenv("APP_PASS", DEMO_PASS)
-                    if user == valid_user and pw == valid_pass:
-                        st.session_state.authenticated = True
-                        st.session_state.username = user
-                        st.session_state.user_tier = "demo"
-                        initialize_demo_workspace()
-                        st.rerun()
-                    # Then check database users
+
+            # Handle AFTER form block — safe from Streamlit form rerun issues
+            if submitted:
+                # First check demo credentials
+                valid_user = os.getenv("APP_USER", DEMO_USER)
+                valid_pass = os.getenv("APP_PASS", DEMO_PASS)
+                if user == valid_user and pw == valid_pass:
+                    st.session_state.authenticated = True
+                    st.session_state.username = user
+                    st.session_state.user_tier = "demo"
+                    _ensure_dfs()
+                    initialize_demo_workspace()
+                    st.rerun()
+                else:
+                    # Only check database users if demo creds did not match
                     success, user_data = users.verify_user(user, pw)
                     if success:
                         st.session_state.authenticated = True
@@ -674,6 +690,7 @@ def login_page() -> None:
                         st.rerun()
                     else:
                         st.error("Invalid credentials.")
+
             st.markdown(
                 "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
                 "Demo: admin / pilot2026</p>",
@@ -681,28 +698,31 @@ def login_page() -> None:
             )
         
         with tab_signup:
-            with st.form("signup_form"):
+            with st.form("signup_form", clear_on_submit=False):
                 new_user = st.text_input("Username", placeholder="Choose a username")
                 new_email = st.text_input("Email", placeholder="your@email.com")
                 new_pw = st.text_input("Password", type="password", placeholder="Create password")
                 confirm_pw = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
                 st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
                 signup_submit = st.form_submit_button("Create Account", use_container_width=True, type="primary")
-                if signup_submit:
-                    if not new_user or not new_email or not new_pw:
-                        st.error("Please fill in all fields.")
-                    elif new_pw != confirm_pw:
-                        st.error("Passwords do not match.")
-                    elif len(new_pw) < 6:
-                        st.error("Password must be at least 6 characters.")
+
+            # Handle AFTER form block — safe from Streamlit form rerun issues
+            if signup_submit:
+                if not new_user or not new_email or not new_pw:
+                    st.error("Please fill in all fields.")
+                elif new_pw != confirm_pw:
+                    st.error("Passwords do not match.")
+                elif len(new_pw) < 6:
+                    st.error("Password must be at least 6 characters.")
+                else:
+                    success, msg = users.create_user(new_user, new_email, new_pw)
+                    if success:
+                        st.success(msg + " Please sign in.")
+                        st.session_state.show_signup = False
+                        st.rerun()
                     else:
-                        success, msg = users.create_user(new_user, new_email, new_pw)
-                        if success:
-                            st.success(msg + " Please sign in.")
-                            st.session_state.show_signup = False
-                            st.rerun()
-                        else:
-                            st.error(msg)
+                        st.error(msg)
+
             st.markdown(
                 "<p style='text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:1rem;'>"
                 "Starter includes analytics. Complete adds TaxShield planning tools.</p>",
@@ -835,6 +855,9 @@ def generate_demo_data(months: int = 6, business_type: str = "Auto Repair") -> d
 def initialize_demo_workspace() -> None:
     if not st.session_state.business_type:
         st.session_state.business_type = "Auto Repair"
+
+    # Guard: ensure df_* are DataFrames before calling .empty
+    _ensure_dfs()
 
     if st.session_state.df_sales.empty:
         demo = generate_demo_data(6, st.session_state.business_type)
@@ -1224,6 +1247,7 @@ def onboarding_wizard() -> None:
 # PAGE: DATA INPUT
 # ────────────────────────────────────────────────
 def page_data_input() -> None:
+    _ensure_dfs()
     st.markdown('<div class="page-header">Data Input</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="page-sub">Upload CSVs, add transactions manually, or load demo data</div>',
@@ -1435,6 +1459,7 @@ def page_data_input() -> None:
 # NEW: Recalculate button, last-updated timestamp, What-If simulator
 # ────────────────────────────────────────────────
 def page_dashboard() -> None:
+    _ensure_dfs()
     if st.session_state.df_sales.empty:
         st.info("No data loaded yet. Head to **Data Input** or load the demo.")
         return
@@ -1681,6 +1706,7 @@ def page_dashboard() -> None:
 
 
 def page_overview() -> None:
+    _ensure_dfs()
     if st.session_state.df_sales.empty:
         st.info("No data loaded yet. Head to **Data Input** or load the demo.")
         return
@@ -1932,20 +1958,21 @@ def page_taxshield() -> None:
             format_func=lambda value: tax_mod.FILING_FREQUENCY_LABELS[value],
             key="tax_filing_select",
         )
-        selected_profit_margin = st.slider(
+        selected_profit_margin_pct = st.slider(
             "Estimated profit margin",
-            min_value=0.0,
-            max_value=0.5,
-            value=float(st.session_state.tax_profit_margin),
-            step=0.01,
-            format="%.0f%%",
+            min_value=0,
+            max_value=50,
+            value=int(round(float(st.session_state.tax_profit_margin) * 100)),
+            step=1,
+            format="%d%%",
             key="tax_profit_margin_select",
         )
 
     st.session_state.tax_county = selected_county
     st.session_state.tax_structure = selected_structure
     st.session_state.tax_filing = selected_filing
-    st.session_state.tax_profit_margin = selected_profit_margin
+    # Convert integer percent back to decimal for downstream calculations
+    st.session_state.tax_profit_margin = selected_profit_margin_pct / 100.0
     tax = build_tax_snapshot(pnl)
     if not tax:
         st.info("We need more data before rendering the full TaxShield estimate.")
@@ -2023,10 +2050,14 @@ def page_billing() -> None:
         st.markdown("##### Upgrade to Complete")
         st.markdown("**$29/month** — Analytics + Florida TaxShield")
         if st.button("Upgrade to Complete", type="primary", key="upgrade_complete"):
-            # Redirect to Stripe checkout
-            checkout_url = "https://checkout.stripe.com/c/pay/cs_live_a1Pr3GEncQdYwOQ1LpU3bwBDGfhsazknQiyhbv1tSOyr5TNEiSHKxWfGFW"
-            st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
-            st.info("Redirecting to Stripe...")
+            # Redirect to Stripe checkout — URL must be set in Streamlit secrets
+            # Add STRIPE_CHECKOUT_URL to your .streamlit/secrets.toml or Streamlit Cloud secrets
+            checkout_url = st.secrets.get("STRIPE_CHECKOUT_URL", "")
+            if checkout_url:
+                st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
+                st.info("Redirecting to Stripe...")
+            else:
+                st.error("Checkout is not configured. Please contact support.")
         
         st.caption("Secure payment powered by Stripe")
 
