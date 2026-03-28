@@ -685,7 +685,8 @@ def login_page() -> None:
                     if success:
                         st.session_state.authenticated = True
                         st.session_state.username = user
-                        st.session_state.user_tier = user_data["tier"]
+                        # New signups default to starter; paid users get their actual tier from billing
+                        st.session_state.user_tier = user_data.get("tier") or "starter"
                         # Load user's saved data from database
                         st.session_state.df_sales = users.load_user_data(user, "sales")
                         st.session_state.df_purchases = users.load_user_data(user, "purchases")
@@ -2121,6 +2122,12 @@ def page_settings() -> None:
 # PAGE: AI ADVISOR
 # ────────────────────────────────────────────────
 def page_ai_chat() -> None:
+    if st.session_state.user_tier not in {"starter", "complete", "demo"}:
+        st.error("AI Advisor is available on Starter and Complete plans.")
+        if st.button("← Back to Overview"):
+            jump_to("Overview")
+        return
+
     st.markdown('<div class="page-header">AI Advisor</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="page-sub">Ask anything about your profitability — get actionable answers</div>',
@@ -2394,6 +2401,10 @@ def render_sidebar() -> str:
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
         nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
+
+        # AI Advisor is only for Starter/Complete/Demo users
+        if st.session_state.user_tier not in {"starter", "complete", "demo"}:
+            nav_options.remove("AI Advisor")
 
         # Use nav_page directly - jump_to() sets both _pending_nav and nav_page
         default_page = st.session_state.get("nav_page", "Overview")

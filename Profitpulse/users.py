@@ -138,7 +138,7 @@ def verify_user(email: str, password: str):
             return True, {
                 "username": username,
                 "email":    sess.user.email,
-                "tier":     "free",
+                "tier":     "starter",
                 "subscription_status": "inactive",
             }
         except Exception:
