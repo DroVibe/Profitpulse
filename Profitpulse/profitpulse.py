@@ -2510,6 +2510,49 @@ def render_sidebar() -> str:
             _compute_pnl.clear()
             st.rerun()
 
+        # ── PWA Install Guide ─────────────────────
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+        if not st.session_state.get("_pwa_dismissed", False):
+            with st.expander("📱 Add to Home Screen", expanded=False):
+                st.caption("Install as an app on your iPhone")
+                PWA_GUIDE = """
+                <style>
+                .pwa-guide-card {
+                    background: #0f172a;
+                    border: 1px solid rgba(148,163,184,0.15);
+                    border-radius: 10px;
+                    padding: 14px;
+                }
+                .pwa-step { display:flex; align-items:flex-start; gap:10px; margin-bottom:9px; }
+                .pwa-step-num {
+                    background:#6366f1; color:white; font-size:11px; font-weight:700;
+                    width:20px; height:20px; border-radius:50%;
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
+                }
+                .pwa-step-text { font-size:12px; color:#cbd5e1; line-height:1.5; }
+                .pwa-step-text strong { color:#e2e8f0; }
+                </style>
+                <div class="pwa-guide-card">
+                    <div class="pwa-step">
+                        <div class="pwa-step-num">1</div>
+                        <div class="pwa-step-text"><strong>Open Safari</strong> — tap the Share button at the bottom</div>
+                    </div>
+                    <div class="pwa-step">
+                        <div class="pwa-step-num">2</div>
+                        <div class="pwa-step-text"><strong>Scroll down</strong> — tap "Add to Home Screen"</div>
+                    </div>
+                    <div class="pwa-step">
+                        <div class="pwa-step-num">3</div>
+                        <div class="pwa-step-text"><strong>Tap Add</strong> — the icon appears on your home screen</div>
+                    </div>
+                </div>
+                """
+                st.markdown(PWA_GUIDE, unsafe_allow_html=True)
+                if st.button("✓ Dismiss", use_container_width=True):
+                    st.session_state["_pwa_dismissed"] = True
+                    st.rerun()
+            st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
         if st.button("🚪 Sign out", use_container_width=True):
             logout()
 
