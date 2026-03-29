@@ -1198,7 +1198,8 @@ def _receipt_extraction_prompt() -> str:
 
 
 def _preprocess_image(file_bytes: bytes) -> bytes:
-    """Auto-rotate an image based on EXIF orientation tag, then re-encode as JPEG."""
+    """Auto-rotate an image based on EXIF orientation tag, resize to max 1024px
+    wide, then re-encode as JPEG. Keeps receipt scans fast for the vision model."""
     import io
     from PIL import Image
     try:
@@ -1221,7 +1222,7 @@ def _preprocess_image(file_bytes: bytes) -> bytes:
                 img = img.transpose(Image.FLIP_LEFT_RIGHT).rotate(270, expand=True)
             elif orientation == 8:
                 img = img.rotate(90, expand=True)
-        # Force RGB (handles RGBA, palette, etc.) and re-encode as JPEG
+        # Force RGB (handles RGBA, palette, etc.)
         if img.mode in ("RGBA", "P", "LA"):
             background = Image.new("RGB", img.size, (255, 255, 255))
             if img.mode == "P":
@@ -1230,8 +1231,13 @@ def _preprocess_image(file_bytes: bytes) -> bytes:
             img = background
         elif img.mode != "RGB":
             img = img.convert("RGB")
+        # Resize to max 1024px wide — dramatically faster for vision model
+        max_w = 1024
+        if img.width > max_w:
+            ratio = max_w / img.width
+            img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=88)
+        img.save(buf, format="JPEG", quality=82)
         return buf.getvalue()
     except Exception:
         # If preprocessing fails, return original bytes
@@ -1241,55 +1247,70 @@ def _preprocess_image(file_bytes: bytes) -> bytes:
 def scan_receipt_with_ai(uploaded_file) -> dict | None:
     """Send a receipt image to Venice AI and return structured data dict.
     
-    Auto-rotates the image before sending. Uses the Venice vision model.
+    Auto-rotates + resizes image before sending. Uses the Venice vision model.
+    Times out after 30 seconds to prevent the UI from hanging.
     Returns: {"vendor", "date", "amount", "category", "description"} or None on failure.
     """
     import base64
     import json
+    import threading
 
     api_key = get_api_key()
     if not api_key:
         return None
 
-    try:
-        file_bytes = uploaded_file.getvalue()
+    result_holder = [None]  # thread-safe container
+    exception_holder = [None]
 
-        # Preprocess: auto-rotate, convert RGBA/PNG to JPEG for compatibility
-        processed_bytes = _preprocess_image(file_bytes)
+    def _do_scan():
+        try:
+            file_bytes = uploaded_file.getvalue()
+            processed_bytes = _preprocess_image(file_bytes)
+            mime_type = "image/jpeg"
+            b64_data  = base64.b64encode(processed_bytes).decode("utf-8")
+            data_url  = f"data:{mime_type};base64,{b64_data}"
 
-        mime_type = "image/jpeg"  # Always JPEG after preprocessing
-        b64_data  = base64.b64encode(processed_bytes).decode("utf-8")
-        data_url  = f"data:{mime_type};base64,{b64_data}"
+            client = OpenAI(
+                api_key=api_key,
+                base_url=BASE_URL,
+                timeout=30,  # 30-second timeout
+            )
+            response = client.chat.completions.create(
+                model=VISION_MODEl,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text",     "text": _receipt_extraction_prompt()},
+                            {"type": "image_url", "image_url": {"url": data_url}},
+                        ],
+                    }
+                ],
+                max_tokens=400,
+                temperature=0.1,
+            )
 
-        client = OpenAI(api_key=api_key, base_url=BASE_URL)
-        response = client.chat.completions.create(
-            model=VISION_MODEl,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text",     "text": _receipt_extraction_prompt()},
-                        {"type": "image_url", "image_url": {"url": data_url}},
-                    ],
-                }
-            ],
-            max_tokens=400,
-            temperature=0.1,
-        )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith("```"):
+                lines = raw.splitlines()
+                raw = "\n".join(lines[1:-1])
+            result_holder[0] = json.loads(raw)
+        except Exception as exc:
+            exception_holder[0] = exc
 
-        raw = response.choices[0].message.content.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            lines = raw.splitlines()
-            raw = "\n".join(lines[1:-1])
+    t = threading.Thread(target=_do_scan)
+    t.start()
+    t.join(timeout=35)  # Hard timeout at 35s (covers API + preprocessing)
+    if t.is_alive():
+        return None  # Timed out — return None, user fills manually
 
-        result = json.loads(raw)
-        if result.get("error"):
-            return None
-        return result
-
-    except Exception:
+    if exception_holder[0] is not None:
         return None
+
+    result = result_holder[0]
+    if result is None or result.get("error"):
+        return None
+    return result
 
 
 def _ai_pulse_prompt() -> str:
@@ -1540,7 +1561,7 @@ def page_data_input() -> None:
                 with scan_col:
                     scan_key = f"scan_btn_{uploaded_file.name}"
                     if st.button("🔍 AI Scan Receipt", use_container_width=True, key=scan_key):
-                        with st.spinner("Scanning receipt…"):
+                        with st.spinner("📷 Scanning receipt with AI…"):
                             result = scan_receipt_with_ai(uploaded_file)
                         if result and result.get("vendor"):
                             st.session_state["_receipt_scan"] = result
@@ -1550,7 +1571,7 @@ def page_data_input() -> None:
                         else:
                             st.warning(
                                 "⚠️ Couldn't read that receipt clearly. "
-                                "Tip: steady hand, good lighting, avoid shadows. "
+                                "Tip: hold steady, good lighting, avoid shadows. "
                                 "Fill in fields manually below."
                             )
                 if not st.session_state.get("_receipt_scan") or \
@@ -2953,6 +2974,22 @@ def _main_impl() -> None:
     
     # Render theme toggle in sidebar
     render_theme_toggle()
+
+    # Load user data from DB on every page load — this is the single source of truth
+    # for persistence. The login handler also loads, but this catches:
+    #  - users who skip onboarding and never triggered the login data path
+    #  - users whose session state was reset (worker recycle, browser reopen)
+    import users as user_db
+    username = st.session_state.get("username", "")
+    if username:
+        st.session_state.df_sales     = user_db.load_user_data(username, "sales")
+        st.session_state.df_purchases = user_db.load_user_data(username, "purchases")
+        st.session_state.df_expenses  = user_db.load_user_data(username, "expenses")
+        st.session_state.df_labor     = user_db.load_user_data(username, "labor")
+        biz_type = user_db.load_user_setting(username, "business_type")
+        if biz_type:
+            st.session_state.business_type = biz_type
+            st.session_state.onboarded     = True
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
