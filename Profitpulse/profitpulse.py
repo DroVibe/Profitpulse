@@ -1806,6 +1806,52 @@ def page_overview() -> None:
                 pp_card("Tax Deadlines", "—", "Complete plan to view", "default")
     # ── End KPI Cards ─────────────────────────────
 
+    # ── Tax Shield: Real-Time Estimated Tax ─────────────────────────
+    if tax and complete:
+        import datetime as dt
+        today = dt.date.today()
+        ytd_months = today.month
+        ytd_annual_tax = tax["net_annual_tax"] * (ytd_months / 12)
+        annual_revenue = tax.get("annualized_revenue", 0)
+        county = tax.get("sales_tax", {}).get("county", st.session_state.get("tax_county", "") or "your county")
+        quarter_est = tax["net_annual_tax"] / 4
+        year_progress = min(ytd_months / 12 * 100, 100)
+        filing_label = tax.get("sales_tax", {}).get("filing_frequency_label", "quarterly")
+
+        tax_card_html = f"""
+        <div class="pp-card" style="background: linear-gradient(135deg, #1a2744 0%, #1e3a5f 100%); border-color: rgba(59,130,246,0.3); margin-top:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                <div class="label" style="color:#93C5FD;">🛡️ Tax Shield · Real-Time Estimate</div>
+                <div style="font-size:11px; color:#64748B;">{county}</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">Projected Annual Tax</div>
+                    <div style="font-size:1.8rem; font-weight:700; color:#60A5FA; font-family:Inter,sans-serif; line-height:1.1;">${tax['net_annual_tax']:,.0f}</div>
+                    <div style="font-size:11px; color:#475569; margin-top:3px;">Based on ${annual_revenue:,.0f} projected revenue</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">YTD Accrued (Jan–{today.strftime('%b')})</div>
+                    <div style="font-size:1.8rem; font-weight:700; color:#FDE68A; font-family:Inter,sans-serif; line-height:1.1;">${ytd_annual_tax:,.0f}</div>
+                    <div style="font-size:11px; color:#475569; margin-top:3px;">~${quarter_est:,.0f}/{filing_label} · set aside each period</div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#475569; margin-bottom:5px;">
+                    <span>Year progress · {ytd_months}/12 months</span>
+                    <span>{year_progress:.0f}%</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.08); border-radius:999px; height:7px; overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#3B82F6,#60A5FA); width:{year_progress:.0f}%; height:100%; border-radius:999px;"></div>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(tax_card_html, unsafe_allow_html=True)
+        if st.button("📋 Open TaxShield for full breakdown →", use_container_width=True):
+            jump_to("TaxShield")
+    # ── End Tax Shield ─────────────────────────────────────────────
+
     left, right = st.columns([1.8, 1], gap="large")
     with left:
         st.markdown("##### Performance trend")
@@ -1845,18 +1891,22 @@ def page_overview() -> None:
                 st.caption(f"{tax['sales_tax']['county']} county · ${tax['net_annual_tax']:,.0f}/year")
             elif tax:
                 if st.button("Preview Complete →", use_container_width=True, key="overview_preview_tax"):
-                    jump_to("Billing")
+                    jump_to("TaxShield")
                 st.caption(f"{tax['sales_tax']['filing_frequency_label']} filing")
             else:
-                if st.button("Unlock TaxShield →", use_container_width=True, key="overview_unlock_tax"):
-                    jump_to("Billing")
                 st.caption("Add data to calculate")
         with panel_c:
             st.markdown("##### 💎 Plan benefits")
             if not complete:
-                if st.button("Compare plans →", use_container_width=True, key="overview_compare"):
-                    jump_to("Billing")
-                st.caption("Unlock tax estimates & full analytics")
+                user_tier = st.session_state.get("user_tier", "free")
+                is_free = user_tier in {"free", "demo"}
+                if is_free:
+                    st.link_button("Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01", use_container_width=True)
+                    st.caption("or ")
+                    st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
+                else:
+                    st.link_button("Upgrade to Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
+                    st.caption("Unlock tax estimates & full analytics")
             else:
                 st.caption("You have Complete access")
 
@@ -1883,8 +1933,14 @@ def page_overview() -> None:
             next_due = tax["sales_tax"]["schedule"][0].get("due_window", "soon")
             st.caption(f"Tax deadline: {next_due}")
         elif not complete:
-            if st.button("🔓 Unlock TaxShield", use_container_width=True, key="action_unlock"):
-                jump_to("Billing")
+            user_tier = st.session_state.get("user_tier", "free")
+            is_free = user_tier in {"free", "demo"}
+            if is_free:
+                st.link_button("🔓 Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01", use_container_width=True)
+                st.caption("or ")
+                st.link_button("🔓 Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
+            else:
+                st.link_button("🔓 Upgrade to Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
             st.caption("Upgrade to see tax estimates and deadlines")
         
         if st.button("➕ Add transactions", use_container_width=True, key="action_add"):
@@ -1925,8 +1981,14 @@ def page_taxshield() -> None:
         st.markdown("---")
 
     if not complete:
+        user_tier = st.session_state.get("user_tier", "free")
+        is_free = user_tier in {"free", "demo"}
+
         st.markdown("##### Included with ProfitPulse Complete")
-        st.write("Starter users can preview TaxShield, but full estimates and schedules live in Complete.")
+        if is_free:
+            st.write("Free accounts can preview TaxShield estimates. Subscribe to Starter ($19/mo) or Complete ($29/mo) to unlock the full tool.")
+        else:
+            st.write("Starter accounts can preview TaxShield. Upgrade to Complete ($29/mo) for the full tool.")
         p1, p2, p3 = st.columns(3)
         with p1:
             st.metric("County-aware estimate", "Included")
@@ -1934,8 +1996,15 @@ def page_taxshield() -> None:
             st.metric("Filing cadence", tax["sales_tax"]["filing_frequency_label"])
         with p3:
             st.metric("Annualized revenue basis", f"${tax['annualized_revenue']:,.0f}")
-        if st.button("Upgrade to Complete", type="primary"):
-            jump_to("Billing")
+
+        if is_free:
+            c1, c2 = st.columns(2)
+            with c1:
+                st.link_button("Start with Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01", type="primary")
+            with c2:
+                st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", type="secondary")
+        else:
+            st.link_button("Upgrade to Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", type="primary")
         st.caption("TaxShield provides planning support only. Always confirm with a CPA or the Florida Department of Revenue before filing.")
         return
 
@@ -2056,21 +2125,21 @@ def page_billing() -> None:
     if has_complete_access():
         st.success("Complete access is enabled. You can use TaxShield from the main navigation.")
     else:
+        user_tier = st.session_state.get("user_tier", "free")
+        is_free = user_tier in {"free", "demo"}
         st.warning("Upgrade to Complete to unlock TaxShield and tax planning surfaces across Overview.")
-        
-        st.markdown("##### Upgrade to Complete")
-        st.markdown("**$29/month** — Analytics + Florida TaxShield")
-        if st.button("Upgrade to Complete", type="primary", key="upgrade_complete"):
-            # Redirect to Stripe checkout — URL must be set in Streamlit secrets
-            # Add STRIPE_CHECKOUT_URL to your .streamlit/secrets.toml or Streamlit Cloud secrets
-            checkout_url = st.secrets.get("STRIPE_CHECKOUT_URL", "")
-            if checkout_url:
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={checkout_url}">', unsafe_allow_html=True)
-                st.info("Redirecting to Stripe...")
-            else:
-                st.error("Checkout is not configured. Please contact support.")
-        
-        st.caption("Secure payment powered by Stripe")
+
+        if is_free:
+            st.markdown("##### Choose Your Plan")
+            st.markdown("**Starter — $19/mo** — Analytics dashboard, revenue/expense tracking")
+            st.link_button("Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01", type="primary")
+            st.divider()
+            st.markdown("**Complete — $29/mo** — Starter + TaxShield, county estimates, filing schedules")
+            st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", type="primary")
+        else:
+            st.markdown("##### Upgrade to Complete")
+            st.markdown("**$29/month** — Analytics + Florida TaxShield")
+            st.link_button("Upgrade to Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", type="primary")
 
     st.caption("ScaleStack On-Premises is a separate white-glove service line. This page only covers ProfitPulse Starter and ProfitPulse Complete.")
 
