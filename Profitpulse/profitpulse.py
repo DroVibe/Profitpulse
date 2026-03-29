@@ -1549,106 +1549,94 @@ def page_data_input() -> None:
         )
 
         if uploaded_file is not None:
-            # Show preview — use preprocessed image so it displays correctly even if taken sideways
+            # Show preview with corrected orientation
             if uploaded_file.type.startswith("image/"):
                 try:
                     processed = _preprocess_image(uploaded_file.getvalue())
-                    import io
                     st.image(io.BytesIO(processed), caption="Receipt preview", use_container_width=True)
                 except Exception:
                     st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
 
-            # ── AI Scan Button ───────────────────────
+            # ── AI Scan + Save (single form) ────────────────────────
+            # Scan runs on form submit before saving — no separate button, no state sync issues
             if has_api:
-                scan_col, _ = st.columns([1, 3])
-                with scan_col:
-                    scan_key = f"scan_btn_{uploaded_file.name}"
-                    if st.button("🔍 AI Scan Receipt", use_container_width=True, key=scan_key):
-                        with st.spinner("📷 Scanning receipt with AI…"):
-                            result = scan_receipt_with_ai(uploaded_file)
-                        if result and result.get("vendor"):
-                            st.session_state["_receipt_scan"] = result
-                            st.session_state["_receipt_scan_name"] = uploaded_file.name
-                            st.toast("✅ Receipt scanned — review the fields below", icon="🔍")
-                            st.rerun()
-                        else:
-                            st.warning(
-                                "⚠️ Couldn't read that receipt clearly. "
-                                "Tip: hold steady, good lighting, avoid shadows. "
-                                "Fill in fields manually below."
-                            )
-                if not st.session_state.get("_receipt_scan") or \
-                   st.session_state.get("_receipt_scan_name") != uploaded_file.name:
-                    st.caption("💡 Tip: Use the AI Scan button above to auto-fill the fields.")
+                st.info("📷 AI will scan this receipt and auto-fill the fields before saving.")
             else:
-                st.info(
-                    "🔑 **Venice AI not configured.** "
-                    "Add `VENICE_API_KEY` to your Streamlit secrets to enable AI receipt scanning."
-                )
-
-            # Pre-fill from scan result
-            scan = st.session_state.get("_receipt_scan", {})
-            scanned_vendor  = scan.get("vendor", "")
-            scanned_date    = scan.get("date", "")
-            scanned_amount = scan.get("amount", 0)
-            scanned_cat    = scan.get("category", EXPENSE_CATEGORIES[0])
-            scanned_desc   = scan.get("description", "")
-
-            # Validate scanned category is in our list
-            if scanned_cat not in EXPENSE_CATEGORIES:
-                scanned_cat = EXPENSE_CATEGORIES[0]
-
-            st.markdown("---")
-            st.markdown("**Receipt details — verify and save:**")
+                st.info("🔑 Add `VENICE_API_KEY` to secrets to enable AI receipt scanning.")
 
             with st.form("receipt_expense_form", clear_on_submit=True):
                 r1, r2 = st.columns(2)
                 with r1:
                     rec_vendor = st.text_input(
                         "Vendor / Store",
-                        value=scanned_vendor,
                         placeholder="e.g., Home Depot, Starbucks",
                         key="rec_vendor"
                     )
                 with r2:
-                    # Parse scanned date or default to today
-                    default_date = datetime.date.today()
-                    if scanned_date:
-                        try:
-                            default_date = datetime.date.fromisoformat(scanned_date[:10])
-                        except Exception:
-                            default_date = datetime.date.today()
-                    rec_date = st.date_input("Date", value=default_date, key="rec_date")
+                    rec_date = st.date_input(
+                        "Date", value=datetime.date.today(), key="rec_date"
+                    )
 
                 r3, r4 = st.columns(2)
                 with r3:
                     rec_amount = st.number_input(
                         "Total Amount ($)",
-                        min_value=0.0,
-                        step=0.01,
-                        value=float(scanned_amount) if scanned_amount else 0.0,
-                        key="rec_amount"
+                        min_value=0.0, step=0.01, key="rec_amount"
                     )
                 with r4:
-                    cat_idx = (
-                        EXPENSE_CATEGORIES.index(scanned_cat)
-                        if scanned_cat in EXPENSE_CATEGORIES else 0
-                    )
                     rec_category = st.selectbox(
-                        "Category", EXPENSE_CATEGORIES,
-                        index=cat_idx, key="rec_category"
+                        "Category", EXPENSE_CATEGORIES, key="rec_category"
                     )
 
                 rec_desc = st.text_input(
                     "Description (optional)",
-                    value=scanned_desc,
                     placeholder="What was this for?",
                     key="rec_desc"
                 )
 
-                if st.form_submit_button("💾 Save to Expenses", type="primary", use_container_width=True):
+                # Two-button row: scan first, save second
+                col_scan, col_save = st.columns(2)
+                with col_scan:
+                    scan_submitted = st.form_submit_button(
+                        "🔍 Scan & Fill with AI", use_container_width=True
+                    )
+                with col_save:
+                    save_submitted = st.form_submit_button(
+                        "💾 Save to Expenses", type="primary", use_container_width=True
+                    )
+
+                if scan_submitted:
+                    with st.spinner("📷 Scanning receipt with AI…"):
+                        result = scan_receipt_with_ai(uploaded_file)
+                    if result and result.get("vendor"):
+                        # Write scan result directly into widget session keys
+                        st.session_state.rec_vendor   = result.get("vendor", "")
+                        st.session_state.rec_category = (
+                            result.get("category", EXPENSE_CATEGORIES[0])
+                            if result.get("category") in EXPENSE_CATEGORIES
+                            else EXPENSE_CATEGORIES[0]
+                        )
+                        st.session_state.rec_desc = result.get("description", "")
+                        scanned_amt = result.get("amount", 0)
+                        if scanned_amt:
+                            st.session_state.rec_amount = float(scanned_amt)
+                        if result.get("date"):
+                            try:
+                                st.session_state.rec_date = datetime.date.fromisoformat(
+                                    result["date"][:10])
+                            except Exception:
+                                pass
+                        st.toast("✅ Fields filled — review and hit Save!", icon="🔍")
+                    else:
+                        st.warning(
+                            "⚠️ Couldn't read receipt clearly. "
+                            "Fill in fields manually."
+                        )
+                    st.rerun()
+
+                if save_submitted:
                     if rec_amount <= 0:
                         st.warning("Please enter a valid amount.")
                     else:
@@ -1667,10 +1655,10 @@ def page_data_input() -> None:
                             st.session_state.df_expenses = pd.concat(
                                 [st.session_state.df_expenses, row], ignore_index=True)
                         save_all_user_data()
-                        # Clear the scan cache so next upload starts fresh
-                        st.session_state.pop("_receipt_scan", None)
-                        st.session_state.pop("_receipt_scan_name", None)
-                        st.toast(f"Receipt saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}", icon="✅")
+                        st.toast(
+                            f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
+                            icon="✅"
+                        )
                         st.rerun()
 
     # ── Manual Entry ────────────────────────────
