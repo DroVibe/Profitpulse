@@ -1368,6 +1368,7 @@ def page_dashboard() -> None:
             st.rerun()
 
     pnl = calculate_pnl()
+    tax = build_tax_snapshot(pnl)
 
     # ── Natural Language Summary ─────────────────
     if pnl["total_revenue"] > 0:
@@ -1421,6 +1422,50 @@ def page_dashboard() -> None:
     with k5:
         pp_card("Breakeven", f"${pnl['breakeven_revenue']:,.0f}",
                 f"over {pnl['date_range_days']}-day period", "default")
+
+    # ── Tax Shield: Real-Time Estimated Tax ─────────────────────────
+    if tax:
+        import datetime as dt
+        today = dt.date.today()
+        ytd_months = today.month
+        ytd_annual_tax = tax["net_annual_tax"] * (ytd_months / 12)
+        annual_revenue = tax.get("annualized_revenue", 0)
+        county = tax.get("sales_tax", {}).get("county", st.session_state.get("tax_county", "your county") or "your county")
+        quarter_est = tax["net_annual_tax"] / 4
+        year_progress = min(ytd_months / 12 * 100, 100)
+        filing_label = tax.get("sales_tax", {}).get("filing_frequency_label", "quarterly")
+
+        tax_card_html = f"""
+        <div class="pp-card" style="background: linear-gradient(135deg, #1a2744 0%, #1e3a5f 100%); border-color: rgba(59,130,246,0.3); margin-top:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                <div class="label" style="color:#93C5FD;">🛡️ Tax Shield · Real-Time Estimate</div>
+                <div style="font-size:11px; color:#64748B;">{county}</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">Projected Annual Tax</div>
+                    <div style="font-size:1.8rem; font-weight:700; color:#60A5FA; font-family:Inter,sans-serif; line-height:1.1;">${tax['net_annual_tax']:,.0f}</div>
+                    <div style="font-size:11px; color:#475569; margin-top:3px;">Based on ${annual_revenue:,.0f} projected revenue</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">YTD Accrued (Jan–{today.strftime('%b')})</div>
+                    <div style="font-size:1.8rem; font-weight:700; color:#FDE68A; font-family:Inter,sans-serif; line-height:1.1;">${ytd_annual_tax:,.0f}</div>
+                    <div style="font-size:11px; color:#475569; margin-top:3px;">~${quarter_est:,.0f}/{filing_label} · set aside each period</div>
+                </div>
+            </div>
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#475569; margin-bottom:5px;">
+                    <span>Year progress · {ytd_months}/12 months</span>
+                    <span>{year_progress:.0f}%</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.08); border-radius:999px; height:7px; overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#3B82F6,#60A5FA); width:{year_progress:.0f}%; height:100%; border-radius:999px;"></div>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(tax_card_html, unsafe_allow_html=True)
+    # ── End Tax Shield ───────────────────────────────────────────────
 
     # ── Alerts ──────────────────────────────────
     st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
