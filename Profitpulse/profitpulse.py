@@ -684,16 +684,19 @@ def login_page() -> None:
                     success, user_data = users.verify_user(user, pw)
                     if success:
                         st.session_state.authenticated = True
-                        st.session_state.username = user
+                        # user_data contains the actual username (not the email)
+                        db_username = user_data.get("username", user)
+                        st.session_state.username = db_username
                         # New signups default to starter; paid users get their actual tier from billing
                         st.session_state.user_tier = user_data.get("tier") or "starter"
-                        # Load user's saved data from database
-                        st.session_state.df_sales = users.load_user_data(user, "sales")
-                        st.session_state.df_purchases = users.load_user_data(user, "purchases")
-                        st.session_state.df_expenses = users.load_user_data(user, "expenses")
-                        st.session_state.df_labor = users.load_user_data(user, "labor")
+                        # Load user's saved data using their USERNAME (not email)
+                        # so the per-user table names match what save_user_data uses
+                        st.session_state.df_sales     = users.load_user_data(db_username, "sales")
+                        st.session_state.df_purchases = users.load_user_data(db_username, "purchases")
+                        st.session_state.df_expenses  = users.load_user_data(db_username, "expenses")
+                        st.session_state.df_labor     = users.load_user_data(db_username, "labor")
                         # Load user's business type
-                        biz_type = users.load_user_setting(user, "business_type")
+                        biz_type = users.load_user_setting(db_username, "business_type")
                         if biz_type:
                             st.session_state.business_type = biz_type
                             st.session_state.onboarded = True
@@ -727,9 +730,17 @@ def login_page() -> None:
                 else:
                     success, msg = users.create_user(new_user, new_email, new_pw)
                     if success:
-                        # Set flag BEFORE rerun so login tab shows message after reload
-                        st.session_state.just_signed_up = True
-                        st.session_state.show_signup = False
+                        # Auto-log in the new user immediately
+                        st.session_state.authenticated = True
+                        st.session_state.username     = new_user
+                        st.session_state.user_tier   = "starter"
+                        _ensure_dfs()
+                        # Initialize default business type so onboarding doesn't
+                        # re-trigger after signup (user already picked industry)
+                        if not st.session_state.get("business_type"):
+                            st.session_state.business_type = "Other"
+                        st.session_state.onboarded = True
+                        st.session_state.nav_page  = "Overview"
                         st.rerun()
                     else:
                         st.error(msg)
@@ -1313,6 +1324,22 @@ def page_data_input() -> None:
         """, unsafe_allow_html=True)
 
     biz = st.session_state.business_type or "Auto Repair"
+
+    # ── Upgrade nudge for free users ───────────────────────────────
+    if st.session_state.user_tier in {"free"}:
+        st.info(
+            "💡 **You're on the Free plan.** "
+            "Starter ($19/mo) unlocks AI Advisor, export, and full analytics. "
+            "Complete ($29/mo) adds TaxShield."
+        )
+        c1, c2 = st.columns(2)
+        with c1:
+            st.link_button("Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01",
+                          use_container_width=True)
+        with c2:
+            st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
+                          use_container_width=True)
+        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
     if st.session_state.business_type:
         st.caption(f"Configured for: **{biz}**")
 
@@ -2586,8 +2613,11 @@ def render_sidebar() -> str:
             label_visibility="collapsed"
         )
         
-        # Sync nav_page to the selectbox value (for dropdown navigation)
-        st.session_state.nav_page = page
+        # Sync nav_page — ONLY if the user actually changed the selectbox.
+        # This prevents jump_to() calls from being stomped by the selectbox
+        # overwriting nav_page on the very next rerender.
+        if page != st.session_state.get("nav_page", ""):
+            st.session_state.nav_page = page
         # ── Quick Actions (prominent row) ───────
         st.markdown("### Quick Actions")
         st.caption("One-click access to key tools")
