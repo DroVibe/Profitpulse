@@ -1566,14 +1566,15 @@ def page_data_input() -> None:
             else:
                 st.info("🔑 Add `VENICE_API_KEY` to secrets to enable AI receipt scanning.")
 
-            with st.form("receipt_expense_form", clear_on_submit=True):
-                # Pull pre-filled values from scan cache (non-widget keys — safe to write)
-                _s  = st.session_state
-                default_vendor  = _s.get("_r_vendor",  "")
-                default_amount  = _s.get("_r_amount",  0.0)
-                default_cat     = _s.get("_r_category", EXPENSE_CATEGORIES[0])
-                default_desc    = _s.get("_r_desc",     "")
-                default_date    = _s.get("_r_date",    str(datetime.date.today()))
+            with st.form("receipt_expense_form", clear_on_submit=False):
+                # Read pre-filled values from scan cache (non-widget keys)
+                _s = st.session_state
+                default_vendor = _s.pop("_r_vendor",  "")
+                default_amount = _s.pop("_r_amount",  0.0)
+                default_cat    = _s.pop("_r_category", EXPENSE_CATEGORIES[0])
+                default_desc   = _s.pop("_r_desc",     "")
+                default_date   = _s.pop("_r_date",    str(datetime.date.today()))
+                scanned_ok     = _s.pop("_r_scanned",  False)
                 try:
                     default_date_val = datetime.date.fromisoformat(default_date[:10])
                 except Exception:
@@ -1668,9 +1669,6 @@ def page_data_input() -> None:
                             st.session_state.df_expenses = pd.concat(
                                 [st.session_state.df_expenses, row], ignore_index=True)
                         save_all_user_data()
-                        # Clear scan cache so next receipt starts fresh
-                        for k in ("_r_vendor","_r_amount","_r_category","_r_desc","_r_date","_r_scanned"):
-                            _s.pop(k, None)
                         st.toast(
                             f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
                             icon="✅"
