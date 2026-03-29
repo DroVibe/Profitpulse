@@ -293,7 +293,7 @@ def _data_table_name(data_type: str, username: str) -> str:
 
 
 def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
-    """Save user's data to a per-user table (e.g. sales_johndoe)."""
+    """Save user's data to a per-user table (e.g. sales_johndoe). Returns True on success."""
     sb = _get_supabase()
     table_map = {
         "sales": "user_sales", "purchases": "user_purchases",
@@ -312,14 +312,15 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     if sb is not None:
         tname = _data_table_name(data_type, username)
         try:
+            # Delete then insert — all-or-nothing semantics
             sb.table(tname).delete().eq("username", username).execute()
-        except Exception:
-            pass
+        except Exception as exc:
+            return False  # Delete failed — abort rather than lose data
         if records:
             try:
                 sb.table(tname).insert(records).execute()
-            except Exception:
-                pass
+            except Exception as exc:
+                return False  # Insert failed — data not saved
         return True
 
     # SQLite fallback
