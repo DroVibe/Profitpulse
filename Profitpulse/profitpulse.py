@@ -1685,6 +1685,7 @@ def page_data_input() -> None:
                         [st.session_state.df_sales, row], ignore_index=True)
                     save_all_user_data()
                     st.toast("Sale added ✓", icon="✅")
+                    st.rerun()
 
     with tab_p:
         with st.form("add_purchase", clear_on_submit=True):
@@ -1704,6 +1705,7 @@ def page_data_input() -> None:
                         [st.session_state.df_purchases, row], ignore_index=True)
                     save_all_user_data()
                     st.toast("Purchase added ✓", icon="✅")
+                    st.rerun()
 
     with tab_e:
         with st.form("add_expense", clear_on_submit=True):
@@ -1720,6 +1722,7 @@ def page_data_input() -> None:
                     [st.session_state.df_expenses, row], ignore_index=True)
                 save_all_user_data()
                 st.toast("Expense added ✓", icon="✅")
+                st.rerun()
 
     with tab_l:
         with st.form("add_labor", clear_on_submit=True):
@@ -1742,6 +1745,7 @@ def page_data_input() -> None:
                         [st.session_state.df_labor, row], ignore_index=True)
                     save_all_user_data()
                     st.toast("Shift added ✓", icon="✅")
+                    st.rerun()
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
     m1, m2, m3, m4 = st.columns(4)
