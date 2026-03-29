@@ -1567,36 +1567,51 @@ def page_data_input() -> None:
                 st.info("🔑 Add `VENICE_API_KEY` to secrets to enable AI receipt scanning.")
 
             with st.form("receipt_expense_form", clear_on_submit=True):
+                # Pull pre-filled values from scan cache (non-widget keys — safe to write)
+                _s  = st.session_state
+                default_vendor  = _s.get("_r_vendor",  "")
+                default_amount  = _s.get("_r_amount",  0.0)
+                default_cat     = _s.get("_r_category", EXPENSE_CATEGORIES[0])
+                default_desc    = _s.get("_r_desc",     "")
+                default_date    = _s.get("_r_date",    str(datetime.date.today()))
+                try:
+                    default_date_val = datetime.date.fromisoformat(default_date[:10])
+                except Exception:
+                    default_date_val = datetime.date.today()
+                cat_idx = EXPENSE_CATEGORIES.index(default_cat) if default_cat in EXPENSE_CATEGORIES else 0
+
                 r1, r2 = st.columns(2)
                 with r1:
                     rec_vendor = st.text_input(
                         "Vendor / Store",
+                        value=default_vendor,
                         placeholder="e.g., Home Depot, Starbucks",
                         key="rec_vendor"
                     )
                 with r2:
-                    rec_date = st.date_input(
-                        "Date", value=datetime.date.today(), key="rec_date"
-                    )
+                    rec_date = st.date_input("Date", value=default_date_val, key="rec_date")
 
                 r3, r4 = st.columns(2)
                 with r3:
                     rec_amount = st.number_input(
                         "Total Amount ($)",
-                        min_value=0.0, step=0.01, key="rec_amount"
+                        min_value=0.0, step=0.01,
+                        value=float(default_amount) if default_amount else 0.0,
+                        key="rec_amount"
                     )
                 with r4:
                     rec_category = st.selectbox(
-                        "Category", EXPENSE_CATEGORIES, key="rec_category"
+                        "Category", EXPENSE_CATEGORIES,
+                        index=cat_idx, key="rec_category"
                     )
 
                 rec_desc = st.text_input(
                     "Description (optional)",
+                    value=default_desc,
                     placeholder="What was this for?",
                     key="rec_desc"
                 )
 
-                # Two-button row: scan first, save second
                 col_scan, col_save = st.columns(2)
                 with col_scan:
                     scan_submitted = st.form_submit_button(
@@ -1611,24 +1626,22 @@ def page_data_input() -> None:
                     with st.spinner("📷 Scanning receipt with AI…"):
                         result = scan_receipt_with_ai(uploaded_file)
                     if result and result.get("vendor"):
-                        # Write scan result directly into widget session keys
-                        st.session_state.rec_vendor   = result.get("vendor", "")
-                        st.session_state.rec_category = (
-                            result.get("category", EXPENSE_CATEGORIES[0])
+                        _s["_r_vendor"]   = result.get("vendor", "")
+                        _s["_r_category"] = (
+                            result["category"]
                             if result.get("category") in EXPENSE_CATEGORIES
                             else EXPENSE_CATEGORIES[0]
                         )
-                        st.session_state.rec_desc = result.get("description", "")
-                        scanned_amt = result.get("amount", 0)
-                        if scanned_amt:
-                            st.session_state.rec_amount = float(scanned_amt)
+                        _s["_r_desc"]   = result.get("description", "")
+                        amt = result.get("amount", 0)
+                        _s["_r_amount"] = float(amt) if amt else 0.0
                         if result.get("date"):
                             try:
-                                st.session_state.rec_date = datetime.date.fromisoformat(
-                                    result["date"][:10])
+                                _s["_r_date"] = result["date"][:10]
                             except Exception:
                                 pass
-                        st.toast("✅ Fields filled — review and hit Save!", icon="🔍")
+                        _s["_r_scanned"] = True
+                        st.toast("✅ Fields filled — review and Save!", icon="🔍")
                     else:
                         st.warning(
                             "⚠️ Couldn't read receipt clearly. "
@@ -1655,6 +1668,9 @@ def page_data_input() -> None:
                             st.session_state.df_expenses = pd.concat(
                                 [st.session_state.df_expenses, row], ignore_index=True)
                         save_all_user_data()
+                        # Clear scan cache so next receipt starts fresh
+                        for k in ("_r_vendor","_r_amount","_r_category","_r_desc","_r_date","_r_scanned"):
+                            _s.pop(k, None)
                         st.toast(
                             f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
                             icon="✅"
