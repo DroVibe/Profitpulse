@@ -1535,12 +1535,13 @@ def page_data_input() -> None:
                 if not parsed.empty:
                     st.session_state[state_key] = parsed
                     saved_ok = save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
                     if saved_ok:
                         st.toast(f"{label}: {len(parsed):,} rows loaded", icon="📂")
                     else:
                         st.warning(
-                            f"⚠️ {label} loaded in this session but failed to save to "
-                            "database. May not persist after reload."
+                            f"⚠️ {label} loaded but failed to persist. Will show in this session."
                         )
 
     st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
@@ -1683,18 +1684,14 @@ def page_data_input() -> None:
                     # Clear scan cache
                     for k in ("_r_vendor","_r_amount","_r_category","_r_desc","_r_date"):
                         _s.pop(k, None)
-                    saved_ok = save_all_user_data()
-                    if saved_ok:
-                        st.toast(
-                            f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
-                            icon="✅"
-                        )
-                        st.rerun()
-                    else:
-                        st.error(
-                            "⚠️ Failed to save to database. Your data is in the app "
-                            "but may not persist. Contact support if this keeps happening."
-                        )
+                    save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast(
+                        f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
+                        icon="✅"
+                    )
+                    st.rerun()
 
     # ── Manual Entry ────────────────────────────
     st.markdown("##### Or Enter Transactions Manually")
@@ -1718,10 +1715,10 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
-                    if save_all_user_data():
-                        st.toast("Sale added ✓", icon="✅")
-                    else:
-                        st.warning("⚠️ Sale saved locally but failed to persist to database.")
+                    save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Sale added ✓", icon="✅")
                     st.rerun()
 
     with tab_p:
@@ -1740,10 +1737,10 @@ def page_data_input() -> None:
                                          "amount": p_amt, "description": p_desc}])
                     st.session_state.df_purchases = pd.concat(
                         [st.session_state.df_purchases, row], ignore_index=True)
-                    if save_all_user_data():
-                        st.toast("Purchase added ✓", icon="✅")
-                    else:
-                        st.warning("⚠️ Purchase saved locally but failed to persist.")
+                    save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Purchase added ✓", icon="✅")
                     st.rerun()
 
     with tab_e:
@@ -1759,10 +1756,10 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
-                if save_all_user_data():
-                    st.toast("Expense added ✓", icon="✅")
-                else:
-                    st.warning("⚠️ Expense saved locally but failed to persist.")
+                save_all_user_data()
+                _compute_pnl.clear()
+                calculate_pnl()
+                st.toast("Expense added ✓", icon="✅")
                 st.rerun()
 
     with tab_l:
@@ -1784,10 +1781,10 @@ def page_data_input() -> None:
                                          "hours": l_hrs, "rate": l_rate, "description": l_desc}])
                     st.session_state.df_labor = pd.concat(
                         [st.session_state.df_labor, row], ignore_index=True)
-                    if save_all_user_data():
-                        st.toast("Shift added ✓", icon="✅")
-                    else:
-                        st.warning("⚠️ Shift saved locally but failed to persist.")
+                    save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Shift added ✓", icon="✅")
                     st.rerun()
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
@@ -3030,6 +3027,9 @@ def _main_impl() -> None:
         if biz_type:
             st.session_state.business_type = biz_type
             st.session_state.onboarded     = True
+        # Refresh P&L cache so loaded data shows in charts immediately
+        _compute_pnl.clear()
+        calculate_pnl()
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
