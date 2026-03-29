@@ -28,7 +28,8 @@ APP_NAME  = "ProfitPulse"
 # Placeholder - will be set after st is imported
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
-MODEL    = "e2ee-qwen-2-5-7b-p"
+MODEL      = "e2ee-qwen-2-5-7b-p"
+VISION_MODEl = "e2ee-qwen3-vl-30b-a3b-p"  # Venice's vision-capable model for receipt/OCR
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
@@ -1181,6 +1182,7 @@ def _receipt_extraction_prompt() -> str:
     categories = ", ".join(EXPENSE_CATEGORIES)
     return (
         'You are a receipt parser. Extract structured data from this receipt image. '
+        'The image may be rotated or at an angle — read it anyway. '
         'Respond ONLY with valid JSON in this exact format, no markdown, no explanation:\n\n'
         '{"vendor":"store or merchant name","date":"YYYY-MM-DD","amount":0.00,'
         '"category":"best match from this list","description":"brief description of items"}\n\n'
@@ -1190,14 +1192,56 @@ def _receipt_extraction_prompt() -> str:
         '- amount: the TOTAL shown on the receipt (subtotal or grand total, whichever is larger).\n'
         '- category: pick the closest match from the valid list above.\n'
         '- description: 1-2 words max, e.g. "Office supplies", "Restaurant meal", "Parts"\n'
-        '- If you cannot read the receipt clearly, return null values with an error note.\n'
+        '- If you cannot read the receipt clearly, return {"error":"Could not read receipt"} instead.\n'
         'Respond with ONLY JSON.'
     )
+
+
+def _preprocess_image(file_bytes: bytes) -> bytes:
+    """Auto-rotate an image based on EXIF orientation tag, then re-encode as JPEG."""
+    import io
+    from PIL import Image
+    try:
+        img = Image.open(io.BytesIO(file_bytes))
+        # Auto-rotate based on EXIF orientation
+        exif = img.getexif()
+        if exif:
+            orientation = exif.get(0x0112)  # EXIF orientation tag
+            if orientation == 2:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            elif orientation == 3:
+                img = img.rotate(180, expand=True)
+            elif orientation == 4:
+                img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            elif orientation == 5:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT).rotate(90, expand=True)
+            elif orientation == 6:
+                img = img.rotate(270, expand=True)
+            elif orientation == 7:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT).rotate(270, expand=True)
+            elif orientation == 8:
+                img = img.rotate(90, expand=True)
+        # Force RGB (handles RGBA, palette, etc.) and re-encode as JPEG
+        if img.mode in ("RGBA", "P", "LA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=88)
+        return buf.getvalue()
+    except Exception:
+        # If preprocessing fails, return original bytes
+        return file_bytes
 
 
 def scan_receipt_with_ai(uploaded_file) -> dict | None:
     """Send a receipt image to Venice AI and return structured data dict.
     
+    Auto-rotates the image before sending. Uses the Venice vision model.
     Returns: {"vendor", "date", "amount", "category", "description"} or None on failure.
     """
     import base64
@@ -1209,23 +1253,27 @@ def scan_receipt_with_ai(uploaded_file) -> dict | None:
 
     try:
         file_bytes = uploaded_file.getvalue()
-        mime_type  = uploaded_file.type or "image/jpeg"
-        b64_data   = base64.b64encode(file_bytes).decode("utf-8")
-        data_url   = f"data:{mime_type};base64,{b64_data}"
+
+        # Preprocess: auto-rotate, convert RGBA/PNG to JPEG for compatibility
+        processed_bytes = _preprocess_image(file_bytes)
+
+        mime_type = "image/jpeg"  # Always JPEG after preprocessing
+        b64_data  = base64.b64encode(processed_bytes).decode("utf-8")
+        data_url  = f"data:{mime_type};base64,{b64_data}"
 
         client = OpenAI(api_key=api_key, base_url=BASE_URL)
         response = client.chat.completions.create(
-            model=MODEL,
+            model=VISION_MODEl,
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text",       "text": _receipt_extraction_prompt()},
-                        {"type": "image_url",   "image_url": {"url": data_url}},
+                        {"type": "text",     "text": _receipt_extraction_prompt()},
+                        {"type": "image_url", "image_url": {"url": data_url}},
                     ],
                 }
             ],
-            max_tokens=300,
+            max_tokens=400,
             temperature=0.1,
         )
 
@@ -1235,7 +1283,10 @@ def scan_receipt_with_ai(uploaded_file) -> dict | None:
             lines = raw.splitlines()
             raw = "\n".join(lines[1:-1])
 
-        return json.loads(raw)
+        result = json.loads(raw)
+        if result.get("error"):
+            return None
+        return result
 
     except Exception:
         return None
@@ -1498,8 +1549,9 @@ def page_data_input() -> None:
                             st.rerun()
                         else:
                             st.warning(
-                                "Couldn't read the receipt clearly. "
-                                "Please fill in the fields manually below."
+                                "⚠️ Couldn't read that receipt clearly. "
+                                "Tip: steady hand, good lighting, avoid shadows. "
+                                "Fill in fields manually below."
                             )
                 if not st.session_state.get("_receipt_scan") or \
                    st.session_state.get("_receipt_scan_name") != uploaded_file.name:
