@@ -1101,8 +1101,8 @@ def save_all_user_data():
     """Save all user data to database."""
     import users as user_db
     username = st.session_state.get("username", "")
-    if not username or username == "admin":
-        return  # Don't save demo data
+    if not username:
+        return  # No user logged in, nothing to save to
     
     user_db.save_user_data(username, "sales", st.session_state.df_sales)
     user_db.save_user_data(username, "purchases", st.session_state.df_purchases)
@@ -1265,6 +1265,53 @@ def page_data_input() -> None:
         unsafe_allow_html=True,
     )
 
+    # ── First-Time Data Guide ───────────────────
+    has_data = (
+        not st.session_state.df_sales.empty
+        or not st.session_state.df_purchases.empty
+        or not st.session_state.df_expenses.empty
+    )
+    if not has_data:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.08) 100%);
+            border: 1px solid rgba(59,130,246,0.25);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 1.5rem;
+        ">
+            <div style="font-weight:700; font-size:15px; margin-bottom:10px; color:#93C5FD;">
+                📋 Getting Started — What to Upload
+            </div>
+            <p style="color:#CBD5E1; font-size:13px; margin-bottom:10px;">
+                ProfitPulse needs <strong>at minimum your sales data</strong> to show your P&L.
+                Everything else is optional but makes the picture more complete.
+            </p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px;">
+                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
+                    <strong style="color:#86EFAC;">✅ Sales (required)</strong><br>
+                    <span style="color:#94A3B8;">date, category, amount, description</span>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
+                    <strong style="color:#FDE68A;">⚠️ Purchases / COGS</strong><br>
+                    <span style="color:#94A3B8;">date, category, amount, description</span>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
+                    <strong style="color:#93C5FD;">💡 Expenses</strong><br>
+                    <span style="color:#94A3B8;">date, category, amount, description</span>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
+                    <strong style="color:#F9A8D4;">👷 Labor</strong><br>
+                    <span style="color:#94A3B8;">date, employee, hours, rate</span>
+                </div>
+            </div>
+            <p style="color:#64748B; font-size:12px; margin-top:10px; margin-bottom:0;">
+                Upload CSV files below, or use the <strong style="color:#CBD5E1;">demo data</strong> button to explore first.
+                Manual entry tabs are below the CSV uploaders.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
     biz = st.session_state.business_type or "Auto Repair"
     if st.session_state.business_type:
         st.caption(f"Configured for: **{biz}**")
@@ -1289,10 +1336,16 @@ def page_data_input() -> None:
 
     # ── CSV Uploaders ───────────────────────────
     st.markdown("##### Upload CSVs")
-    st.caption(
-        "Sales / Purchases / Expenses: `date, category, amount, description`  ·  "
-        "Labor: `date, employee, hours, rate, description`"
-    )
+    with st.expander("📖 CSV format guide — what each file needs", expanded=not has_data):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Sales · Purchases · Expenses**")
+            st.code("date,category,amount,description\n2026-01-15,Oil Change,150.00,Regular maintenance\n2026-01-20,Inspection,50.00,State inspection", language="text")
+            st.caption("Tip: category is your own label — e.g. 'Oil Change', 'Rent', 'Marketing'")
+        with c2:
+            st.markdown("**Labor / Payroll**")
+            st.code("date,employee,hours,rate,description\n2026-01-15,Mike,8,25.00,Regular shift\n2026-01-18,Mike,10,37.50,OT shift", language="text")
+            st.caption("Tip: hours × rate = labor cost. OT is auto-detected.")
     upload_specs = [
         ("up_sales",  "df_sales",    ["date","category","amount"], "Sales"),
         ("up_purch",  "df_purchases",["date","category","amount"], "Purchases"),
@@ -1897,18 +1950,45 @@ def page_overview() -> None:
                 st.caption("Add data to calculate")
         with panel_c:
             st.markdown("##### 💎 Plan benefits")
-            if not complete:
+            if complete:
+                st.success("✅ Complete — TaxShield unlocked")
+            else:
+                st.markdown("**What's included in each plan:**")
+                starter_benefits = [
+                    "✅ Analytics dashboard",
+                    "✅ Revenue / expense / margin tracking",
+                    "✅ Gross & net margin calculations",
+                    "✅ Business health insights",
+                    "✅ Demo data included",
+                ]
+                complete_benefits = [
+                    "✅ Everything in Starter",
+                    "✅ 🛡️ TaxShield — real-time tax estimate",
+                    "✅ County-aware FL sales tax",
+                    "✅ Quarterly filing schedule",
+                    "✅ Annual tax projection",
+                ]
+                for b in starter_benefits:
+                    st.markdown(f"<span style='font-size:12.5px;color:#CBD5E1'>{b}</span>",
+                                unsafe_allow_html=True)
+                st.markdown("---")
+                for b in complete_benefits:
+                    st.markdown(f"<span style='font-size:12.5px;color:#93C5FD'>{b}</span>",
+                                unsafe_allow_html=True)
+                st.markdown("---")
                 user_tier = st.session_state.get("user_tier", "free")
                 is_free = user_tier in {"free", "demo"}
                 if is_free:
-                    st.link_button("Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01", use_container_width=True)
-                    st.caption("or ")
-                    st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
+                    st.link_button("Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01",
+                                   use_container_width=True)
+                    st.markdown("<span style='font-size:11px;color:#64748B'>or </span>",
+                                unsafe_allow_html=True)
+                    st.link_button("Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
+                                   use_container_width=True)
                 else:
-                    st.link_button("Upgrade to Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00", use_container_width=True)
-                    st.caption("Unlock tax estimates & full analytics")
-            else:
-                st.caption("You have Complete access")
+                    st.link_button("Upgrade to Complete — $29/mo",
+                                   "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
+                                   use_container_width=True)
 
     with right:
         st.markdown("##### What to do next")
