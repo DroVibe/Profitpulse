@@ -607,13 +607,16 @@ def build_tax_snapshot(pnl: dict) -> dict | None:
 
 
 def jump_to(page: str) -> None:
-    # Save pending nav BEFORE rerun so sidebar can read it
+    """Queue navigation to `page`. Navigation happens on the NEXT render cycle.
+    Safe to call from anywhere — forms, buttons, etc.
+    Does NOT call st.rerun() — form submissions auto-rerun; other callers
+    will see the nav take effect on their next natural render."""
     st.session_state["_pending_nav"] = page
     st.session_state.nav_page = page
-    # Clear the nav_select widget key so sidebar selectbox uses our index
+    # Clear nav_select so the sidebar selectbox default-index is recalculated
+    # on the next render using the updated nav_page value.
     if "nav_select" in st.session_state:
         del st.session_state["nav_select"]
-    st.rerun()
 
 
 CHART_LAYOUT = dict(
@@ -2582,12 +2585,13 @@ def render_sidebar() -> str:
         if st.session_state.user_tier not in {"starter", "complete", "demo"}:
             nav_options.remove("AI Advisor")
 
-        # Use nav_page directly - jump_to() sets both _pending_nav and nav_page
+        # Honor pending nav from jump_to() FIRST — before selectbox runs.
+        # This must come before the selectbox so nav_page is set correctly.
+        pending = st.session_state.pop("_pending_nav", None)
+        if pending and pending in nav_options:
+            st.session_state.nav_page = pending
+        
         default_page = st.session_state.get("nav_page", "Overview")
-        
-        # Clear any pending nav
-        st.session_state.pop("_pending_nav", None)
-        
         if default_page not in nav_options:
             default_page = "Overview"
 
@@ -2614,8 +2618,7 @@ def render_sidebar() -> str:
         )
         
         # Sync nav_page — ONLY if the user actually changed the selectbox.
-        # This prevents jump_to() calls from being stomped by the selectbox
-        # overwriting nav_page on the very next rerender.
+        # Prevents pending nav from being stomped if user also clicks a selectbox option.
         if page != st.session_state.get("nav_page", ""):
             st.session_state.nav_page = page
         # ── Quick Actions (prominent row) ───────
