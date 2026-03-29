@@ -1172,6 +1172,75 @@ def call_ai(user_query: str) -> str:
         return f"**AI Error:** {err}\n\nCheck your internet connection and API key."
 
 
+# ────────────────────────────────────────────────
+# RECEIPT AI SCANNER
+# Uses Venice AI to extract vendor, date, amount, category from a receipt photo.
+# ────────────────────────────────────────────────
+def _receipt_extraction_prompt() -> str:
+    """System prompt for structured receipt extraction."""
+    categories = ", ".join(EXPENSE_CATEGORIES)
+    return (
+        'You are a receipt parser. Extract structured data from this receipt image. '
+        'Respond ONLY with valid JSON in this exact format, no markdown, no explanation:\n\n'
+        '{"vendor":"store or merchant name","date":"YYYY-MM-DD","amount":0.00,'
+        '"category":"best match from this list","description":"brief description of items"}\n\n'
+        f'Valid categories: {categories}\n\n'
+        'Rules:\n'
+        '- date: use YYYY-MM-DD format. If date is unclear, use today\'s date.\n'
+        '- amount: the TOTAL shown on the receipt (subtotal or grand total, whichever is larger).\n'
+        '- category: pick the closest match from the valid list above.\n'
+        '- description: 1-2 words max, e.g. "Office supplies", "Restaurant meal", "Parts"\n'
+        '- If you cannot read the receipt clearly, return null values with an error note.\n'
+        'Respond with ONLY JSON.'
+    )
+
+
+def scan_receipt_with_ai(uploaded_file) -> dict | None:
+    """Send a receipt image to Venice AI and return structured data dict.
+    
+    Returns: {"vendor", "date", "amount", "category", "description"} or None on failure.
+    """
+    import base64
+    import json
+
+    api_key = get_api_key()
+    if not api_key:
+        return None
+
+    try:
+        file_bytes = uploaded_file.getvalue()
+        mime_type  = uploaded_file.type or "image/jpeg"
+        b64_data   = base64.b64encode(file_bytes).decode("utf-8")
+        data_url   = f"data:{mime_type};base64,{b64_data}"
+
+        client = OpenAI(api_key=api_key, base_url=BASE_URL)
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text",       "text": _receipt_extraction_prompt()},
+                        {"type": "image_url",   "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            max_tokens=300,
+            temperature=0.1,
+        )
+
+        raw = response.choices[0].message.content.strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            lines = raw.splitlines()
+            raw = "\n".join(lines[1:-1])
+
+        return json.loads(raw)
+
+    except Exception:
+        return None
+
+
 def _ai_pulse_prompt() -> str:
     """Build a dynamic, data-driven sidebar AI Pulse prompt."""
     pnl = st.session_state.pnl_cache
@@ -1396,66 +1465,134 @@ def page_data_input() -> None:
     st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
 
     # ── Receipt Scanner ─────────────────────────
-    st.markdown("##### 📷 Add from Receipt")
-    st.caption("Upload a receipt photo from your phone or computer, then add to expenses")
+    st.markdown("##### 📷 AI Receipt Scanner")
+    has_api = bool(get_api_key())
     
-    with st.expander("Open Receipt Scanner", expanded=False):
+    with st.expander("📷 Scan a Receipt with AI", expanded=False):
         uploaded_file = st.file_uploader(
             "Upload receipt (photo or PDF)",
             type=["png", "jpg", "jpeg", "pdf"],
-            help="Take a photo of your receipt and upload it here"
+            help="Take a photo of your receipt and upload it here. Works best with clear, well-lit photos.",
+            key="receipt_upload"
         )
-        
+
         if uploaded_file is not None:
-            # Show preview if image
+            # Show preview
             if uploaded_file.type.startswith("image/"):
                 st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
-            
+
+            # ── AI Scan Button ───────────────────────
+            if has_api:
+                scan_col, _ = st.columns([1, 3])
+                with scan_col:
+                    scan_key = f"scan_btn_{uploaded_file.name}"
+                    if st.button("🔍 AI Scan Receipt", use_container_width=True, key=scan_key):
+                        with st.spinner("Scanning receipt…"):
+                            result = scan_receipt_with_ai(uploaded_file)
+                        if result and result.get("vendor"):
+                            st.session_state["_receipt_scan"] = result
+                            st.session_state["_receipt_scan_name"] = uploaded_file.name
+                            st.toast("✅ Receipt scanned — review the fields below", icon="🔍")
+                            st.rerun()
+                        else:
+                            st.warning(
+                                "Couldn't read the receipt clearly. "
+                                "Please fill in the fields manually below."
+                            )
+                if not st.session_state.get("_receipt_scan") or \
+                   st.session_state.get("_receipt_scan_name") != uploaded_file.name:
+                    st.caption("💡 Tip: Use the AI Scan button above to auto-fill the fields.")
+            else:
+                st.info(
+                    "🔑 **Venice AI not configured.** "
+                    "Add `VENICE_API_KEY` to your Streamlit secrets to enable AI receipt scanning."
+                )
+
+            # Pre-fill from scan result
+            scan = st.session_state.get("_receipt_scan", {})
+            scanned_vendor  = scan.get("vendor", "")
+            scanned_date    = scan.get("date", "")
+            scanned_amount = scan.get("amount", 0)
+            scanned_cat    = scan.get("category", EXPENSE_CATEGORIES[0])
+            scanned_desc   = scan.get("description", "")
+
+            # Validate scanned category is in our list
+            if scanned_cat not in EXPENSE_CATEGORIES:
+                scanned_cat = EXPENSE_CATEGORIES[0]
+
             st.markdown("---")
-            st.markdown("**Enter details from the receipt:**")
-            
+            st.markdown("**Receipt details — verify and save:**")
+
             with st.form("receipt_expense_form", clear_on_submit=True):
                 r1, r2 = st.columns(2)
                 with r1:
-                    rec_vendor = st.text_input("Vendor / Store", placeholder="e.g., Home Depot, Starbucks")
+                    rec_vendor = st.text_input(
+                        "Vendor / Store",
+                        value=scanned_vendor,
+                        placeholder="e.g., Home Depot, Starbucks",
+                        key="rec_vendor"
+                    )
                 with r2:
-                    rec_date = st.date_input("Date", value=datetime.date.today())
-                
+                    # Parse scanned date or default to today
+                    default_date = datetime.date.today()
+                    if scanned_date:
+                        try:
+                            default_date = datetime.date.fromisoformat(scanned_date[:10])
+                        except Exception:
+                            default_date = datetime.date.today()
+                    rec_date = st.date_input("Date", value=default_date, key="rec_date")
+
                 r3, r4 = st.columns(2)
                 with r3:
-                    rec_amount = st.number_input("Total Amount ($)", min_value=0.0, step=0.01)
+                    rec_amount = st.number_input(
+                        "Total Amount ($)",
+                        min_value=0.0,
+                        step=0.01,
+                        value=float(scanned_amount) if scanned_amount else 0.0,
+                        key="rec_amount"
+                    )
                 with r4:
-                    rec_category = st.selectbox("Category", EXPENSE_CATEGORIES)
-                
-                rec_desc = st.text_input("Description (optional)", placeholder="What was this for?")
-                
+                    cat_idx = (
+                        EXPENSE_CATEGORIES.index(scanned_cat)
+                        if scanned_cat in EXPENSE_CATEGORIES else 0
+                    )
+                    rec_category = st.selectbox(
+                        "Category", EXPENSE_CATEGORIES,
+                        index=cat_idx, key="rec_category"
+                    )
+
+                rec_desc = st.text_input(
+                    "Description (optional)",
+                    value=scanned_desc,
+                    placeholder="What was this for?",
+                    key="rec_desc"
+                )
+
                 if st.form_submit_button("💾 Save to Expenses", type="primary", use_container_width=True):
                     if rec_amount <= 0:
-                        st.warning("Please enter a valid amount")
+                        st.warning("Please enter a valid amount.")
                     else:
-                        # Build expense row
-                        desc_text = f"Receipt: {rec_vendor}"
+                        desc_text = f"Receipt: {rec_vendor}" if rec_vendor else "Receipt"
                         if rec_desc:
-                            desc_text += f" - {rec_desc}"
-                        
+                            desc_text += f" — {rec_desc}"
                         row = pd.DataFrame([{
-                            "date": str(rec_date),
-                            "category": rec_category,
-                            "amount": rec_amount,
-                            "description": desc_text
+                            "date":        str(rec_date),
+                            "category":    rec_category,
+                            "amount":      rec_amount,
+                            "description": desc_text,
                         }])
-                        
-                        # Append to expenses
                         if st.session_state.df_expenses.empty:
                             st.session_state.df_expenses = row
                         else:
                             st.session_state.df_expenses = pd.concat(
                                 [st.session_state.df_expenses, row], ignore_index=True)
-                        
                         save_all_user_data()
-                        st.toast(f"Receipt saved: {rec_vendor} - ${rec_amount:,.2f}", icon="✅")
+                        # Clear the scan cache so next upload starts fresh
+                        st.session_state.pop("_receipt_scan", None)
+                        st.session_state.pop("_receipt_scan_name", None)
+                        st.toast(f"Receipt saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}", icon="✅")
                         st.rerun()
 
     # ── Manual Entry ────────────────────────────
