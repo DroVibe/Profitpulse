@@ -29,7 +29,7 @@ APP_NAME  = "ProfitPulse"
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
 MODEL      = "e2ee-qwen-2-5-7b-p"
-VISION_MODEl = "e2ee-qwen3-vl-30b-a3b-p"  # Venice's vision-capable model for receipt/OCR
+VISION_MODEL = "qwen3-vl-235b-a22b"  # Venice's fastest vision model for receipt/OCR
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
@@ -1276,7 +1276,7 @@ def scan_receipt_with_ai(uploaded_file) -> dict | None:
                 timeout=30,  # 30-second timeout
             )
             response = client.chat.completions.create(
-                model=VISION_MODEl,
+                model=VISION_MODEL,
                 messages=[
                     {
                         "role": "user",
@@ -1549,9 +1549,14 @@ def page_data_input() -> None:
         )
 
         if uploaded_file is not None:
-            # Show preview
+            # Show preview — use preprocessed image so it displays correctly even if taken sideways
             if uploaded_file.type.startswith("image/"):
-                st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
+                try:
+                    processed = _preprocess_image(uploaded_file.getvalue())
+                    import io
+                    st.image(io.BytesIO(processed), caption="Receipt preview", use_container_width=True)
+                except Exception:
+                    st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
             else:
                 st.info(f"PDF uploaded: {uploaded_file.name}")
 
