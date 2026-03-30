@@ -757,6 +757,12 @@ def login_page() -> None:
 
 
 def logout() -> None:
+    # Save all data before wiping session — skip for demo (no DB account)
+    if st.session_state.get("authenticated") and st.session_state.get("user_tier") not in {"demo"}:
+        username = st.session_state.get("username", "")
+        if username:
+            # save_all_user_data() persists all four dataframes in one call
+            save_all_user_data()
     # Wipe entire session on sign-out for security
     for key in list(st.session_state.keys()):
         del st.session_state[key]

@@ -318,6 +318,7 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
             return False  # Delete failed — abort rather than lose data
         if records:
             try:
+                # FIX: use same per-user table name as the delete above
                 sb.table(tname).insert(records).execute()
             except Exception as exc:
                 return False  # Insert failed — data not saved
