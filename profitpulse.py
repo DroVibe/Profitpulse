@@ -2962,6 +2962,7 @@ def render_sidebar() -> str:
             st.session_state.last_calculated = None
             st.session_state.onboarded       = False
             st.session_state.business_type   = None
+            st.session_state["_data_loaded"] = False
             st.session_state.nav_page        = "Overview"
             st.session_state.onboarding_step = 0
             _compute_pnl.clear()
@@ -3040,13 +3041,12 @@ def _main_impl() -> None:
     # Render theme toggle in sidebar
     render_theme_toggle()
 
-    # Load user data from DB on every page load — this is the single source of truth
-    # for persistence. The login handler also loads, but this catches:
-    #  - users who skip onboarding and never triggered the login data path
-    #  - users whose session state was reset (worker recycle, browser reopen)
+    # Load user data ONCE per session (on first authenticated render only).
+    # After that, session state is the source of truth — don't overwrite it.
+    # This prevents newly added entries from being wiped by a stale reload.
     import users as user_db
     username = st.session_state.get("username", "")
-    if username:
+    if username and not st.session_state.get("_data_loaded", False):
         st.session_state.df_sales     = user_db.load_user_data(username, "sales")
         st.session_state.df_purchases = user_db.load_user_data(username, "purchases")
         st.session_state.df_expenses  = user_db.load_user_data(username, "expenses")
@@ -3058,6 +3058,7 @@ def _main_impl() -> None:
         # Refresh P&L cache so loaded data shows in charts immediately
         _compute_pnl.clear()
         calculate_pnl()
+        st.session_state["_data_loaded"] = True
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
