@@ -1132,7 +1132,11 @@ def save_all_user_data():
         ("expenses",  st.session_state.df_expenses),
         ("labor",     st.session_state.df_labor),
     ]:
-        if not user_db.save_user_data(username, dtype, df):
+        try:
+            if not user_db.save_user_data(username, dtype, df):
+                ok = False
+        except Exception as e:
+            st.error(f"SAVE ERROR: {e}")
             ok = False
     if st.session_state.get("business_type"):
         user_db.save_user_setting(username, "business_type", st.session_state.business_type)

@@ -357,21 +357,15 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     if sb is not None:
         # FIX: use the shared table name from table_map, NOT _data_table_name()
         tname = table_map[data_type]
-        print(f"SAVE DEBUG: table={tname}, username={username!r}, records={len(records)}")
         try:
-            # Delete then insert — all-or-nothing semantics
             sb.table(tname).delete().eq("username", username).execute()
-            print("SAVE DEBUG: DELETE succeeded")
         except Exception as e:
-            print(f"SAVE DEBUG: DELETE FAILED: {e}")
-            return False  # Delete failed — abort rather than lose data
+            raise RuntimeError(f"DELETE failed on {tname} for {username}: {e}")
         if records:
             try:
                 sb.table(tname).insert(records).execute()
-                print("SAVE DEBUG: INSERT succeeded")
             except Exception as e:
-                print(f"SAVE DEBUG: INSERT FAILED: {e}")
-                return False  # Insert failed — data not saved
+                raise RuntimeError(f"INSERT failed on {tname} for {username}: {e}")
         return True
 
     # SQLite fallback
