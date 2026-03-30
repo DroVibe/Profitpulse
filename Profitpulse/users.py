@@ -347,10 +347,19 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     if data_type not in table_map:
         return False
 
+    import math
     records = []
     if df is not None:
         for _, row in df.iterrows():
-            r = {k: v for k, v in row.to_dict().items() if k not in ("id", "user_id")}
+            r = {}
+            for k, v in row.to_dict().items():
+                if k in ("id", "user_id"):
+                    continue
+                # Replace NaN/inf with None (JSON null) so Supabase accepts it
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+                else:
+                    r[k] = v
             r["username"] = username
             records.append(r)
 
