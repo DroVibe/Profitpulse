@@ -1298,7 +1298,8 @@ def scan_receipt_with_ai(uploaded_file) -> dict | None:
         return result
 
     except Exception as e:
-        print(f"Receipt scan error: {e}")
+        import streamlit as st
+        st.session_state["_receipt_scan_error"] = str(e)
         return None
 
 
