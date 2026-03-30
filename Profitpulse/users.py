@@ -337,8 +337,6 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     """Save user's data to the shared Supabase table (user_sales, etc.).
     Uses DELETE + INSERT with username column to isolate per-user rows.
     Returns True on success."""
-    # TEMP DEBUG
-    print(f"SAVE DEBUG: username={username!r}, data_type={data_type!r}, rows={len(df) if df is not None else 'None'}")
     sb = _get_supabase()
     table_map = {
         "sales": "user_sales", "purchases": "user_purchases",

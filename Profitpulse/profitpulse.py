@@ -635,7 +635,6 @@ CHART_LAYOUT = dict(
 # AUTH
 # ────────────────────────────────────────────────
 def login_page() -> None:
-    st.write("🔧 BUILD: March 30 v2")
     import users  # User management module
     
     _, col, _ = st.columns([1, 1.2, 1])
@@ -1132,11 +1131,7 @@ def save_all_user_data():
         ("expenses",  st.session_state.df_expenses),
         ("labor",     st.session_state.df_labor),
     ]:
-        try:
-            if not user_db.save_user_data(username, dtype, df):
-                ok = False
-        except Exception as e:
-            st.error(f"SAVE ERROR: {e}")
+        if not user_db.save_user_data(username, dtype, df):
             ok = False
     if st.session_state.get("business_type"):
         user_db.save_user_setting(username, "business_type", st.session_state.business_type)
@@ -1728,23 +1723,14 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
-                    # TEMP DEBUG
-                    st.write("DEBUG username:", st.session_state.get("username"))
-                    st.write("DEBUG df_sales rows:", len(st.session_state.df_sales))
-                    st.write("DEBUG df_sales sample:", st.session_state.df_sales.tail(3).to_dict())
                     ok = save_all_user_data()
-                    import users as _u
-                    sb_test = _u._get_supabase()
-                    st.write("DEBUG supabase client:", "CONNECTED" if sb_test is not None else "NONE - falling back to SQLite")
-                    st.write("DEBUG save_all_user_data returned:", ok)
                     if ok:
                         _compute_pnl.clear()
                         calculate_pnl()
                         st.toast("Sale added ✓", icon="✅")
                     else:
                         st.warning("Sale added to this session but failed to save to the database. Please try again or contact support.")
-                    st.stop()  # TEMP: prevents rerun so debug output stays visible
-                    # st.rerun()  # commented out temporarily
+                    st.rerun()
 
     with tab_p:
         with st.form("add_purchase", clear_on_submit=True):
@@ -1783,20 +1769,14 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
-                # TEMP DEBUG
-                st.write("DEBUG username:", st.session_state.get("username"))
-                st.write("DEBUG df_expenses rows:", len(st.session_state.df_expenses))
-                st.write("DEBUG df_expenses sample:", st.session_state.df_expenses.tail(3).to_dict())
                 ok = save_all_user_data()
-                st.write("DEBUG save_all_user_data returned:", ok)
                 if ok:
                     _compute_pnl.clear()
                     calculate_pnl()
                     st.toast("Expense added ✓", icon="✅")
                 else:
                     st.warning("Expense added to this session but failed to save to the database. Please try again or contact support.")
-                st.stop()  # TEMP: prevents rerun so debug output stays visible
-                # st.rerun()  # commented out temporarily
+                st.rerun()
 
     with tab_l:
         with st.form("add_labor", clear_on_submit=True):
@@ -3055,12 +3035,6 @@ def _main_impl() -> None:
     # After that, session state is the source of truth — don't overwrite it.
     # This prevents newly added entries from being wiped by a stale reload.
     import users as user_db
-    # TEMP: Supabase connection diagnostic
-    _sb_check = user_db._get_supabase()
-    if _sb_check is None:
-        st.error("⚠️ DIAGNOSTIC: Supabase client is None — check SUPABASE_URL and SUPABASE_KEY in secrets")
-    else:
-        st.success("✅ DIAGNOSTIC: Supabase connected")
     username = st.session_state.get("username", "")
     if username and not st.session_state.get("_data_loaded", False):
         st.session_state.df_sales     = user_db.load_user_data(username, "sales")
