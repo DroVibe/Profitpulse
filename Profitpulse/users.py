@@ -81,10 +81,14 @@ def create_user(username: str, email: str, password: str):
 
     if sb is not None:
         # Step A — create auth account
+        # email_confirm: False skips the confirmation email so users can log in
+        # immediately. Disable this in the Supabase dashboard only if you want
+        # email verification on signup.
         try:
             resp = sb.auth.sign_up({
                 "email":    email,
                 "password": password,
+                "options":  {"email_confirm": False},
             })
         except Exception as e:
             err = str(e).lower()
