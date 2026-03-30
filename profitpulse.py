@@ -537,7 +537,7 @@ def pnl_row(label: str, amount: float, pct: str = "", total: bool = False) -> No
 
 
 PLAN_LABELS = {
-    "free": "ProfitPulse Starter",
+    "free": "ProfitPulse Free",
     "starter": "ProfitPulse Starter",
     "pro": "ProfitPulse Complete",
     "complete": "ProfitPulse Complete",
@@ -737,7 +737,7 @@ def login_page() -> None:
                         # Auto-log in the new user immediately
                         st.session_state.authenticated = True
                         st.session_state.username     = new_user
-                        st.session_state.user_tier   = "starter"
+                        st.session_state.user_tier   = "free"
                         _ensure_dfs()
                         # Initialize default business type so onboarding doesn't
                         # re-trigger after signup (user already picked industry)

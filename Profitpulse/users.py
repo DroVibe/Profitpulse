@@ -96,16 +96,19 @@ def create_user(username: str, email: str, password: str):
                 return False, "Email already registered."
             return False, f"Signup failed: {e}"
 
-        if resp.user is None:
+        # resp.user can be None even when autoconfirm is off (confirmed-email flow).
+        # Only fail if BOTH user and session are None — session proves auth succeeded.
+        if resp.user is None and resp.session is None:
             msg = getattr(resp, "msg", "") or str(resp)
             return False, f"Signup failed: {msg}"
 
         # Step B — insert into public.users (username + tier for downstream use)
+        # New signups default to "free" tier. Stripe webhook upgrades to "starter"/"complete".
         try:
             sb.table("users").insert({
                 "username": username,
                 "email":     email,
-                "tier":      "starter",
+                "tier":      "free",
             }).execute()
         except Exception as e:
             err = str(e).lower()
