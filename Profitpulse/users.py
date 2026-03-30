@@ -70,29 +70,49 @@ def _init_sqlite():
 
 def create_user(username: str, email: str, password: str):
     """
-    Create account. Supabase Auth only — no profiles/users table needed.
-    Username stored in auth user_metadata.
+    Create account in two steps:
+      A. Insert into Supabase Auth (email + password)
+      B. Insert matching row into public.users (username, email, tier)
+
+    Both steps must succeed. If Step A succeeds but Step B fails,
+    the error is surfaced to the user rather than silently swallowed.
     """
     sb = _get_supabase()
 
     if sb is not None:
+        # Step A — create auth account
         try:
-            # Sign up via Supabase Auth (email + password)
-            # Username goes into user_metadata, NOT into any public table
             resp = sb.auth.sign_up({
                 "email":    email,
                 "password": password,
-                "options":  {"data": {"username": username}}
             })
-            if resp.user is None:
-                msg = getattr(resp, "msg", "") or str(resp)
-                return False, f"Signup failed: {msg}"
-            return True, "Account created! Check your email to confirm, then sign in."
         except Exception as e:
             err = str(e).lower()
             if "already" in err:
                 return False, "Email already registered."
             return False, f"Signup failed: {e}"
+
+        if resp.user is None:
+            msg = getattr(resp, "msg", "") or str(resp)
+            return False, f"Signup failed: {msg}"
+
+        # Step B — insert into public.users (username + tier for downstream use)
+        try:
+            sb.table("users").insert({
+                "username": username,
+                "email":     email,
+                "tier":      "starter",
+            }).execute()
+        except Exception as e:
+            err = str(e).lower()
+            if "already" in err and "username" in err:
+                return False, "Username already taken."
+            if "already" in err:
+                return False, "Email already registered."
+            # Auth succeeded but profile save failed — tell the user clearly
+            return False, "Account created but profile save failed. Please contact support."
+
+        return True, "Account created! Check your email to confirm, then sign in."
 
     # ── Local SQLite fallback ─────────────────────────────────────────────────
     _init_sqlite()
@@ -118,31 +138,43 @@ def create_user(username: str, email: str, password: str):
 
 def verify_user(email: str, password: str):
     """
-    Verify credentials using EMAIL (Supabase Auth standard — email is the identity).
-    Local: SQLite (looks up by email).
+    Verify credentials via Supabase Auth, then look up username + tier
+    from public.users (filtered by email).
+    Returns (True, dict) on success, (False, None) on failure.
+    Dict shape: {"username": str, "email": str, "tier": str}
     """
     sb = _get_supabase()
 
     if sb is not None:
-        # ── Cloud path ────────────────────────────────────────────────────
+        # Step A — authenticate via Supabase Auth
         try:
             sess = sb.auth.sign_in_with_password({"email": email, "password": password})
             if sess.user is None:
                 return False, None
-            # Extract username from auth metadata (defaults to email prefix if none)
-            username = (
-                sess.user.user_metadata.get("username")
-                or sess.user.user_metadata.get("full_name")
-                or email.split("@")[0]
-            )
-            return True, {
-                "username": username,
-                "email":    sess.user.email,
-                "tier":     "starter",
-                "subscription_status": "inactive",
-            }
         except Exception:
             return False, None
+
+        # Step B — look up username and tier from public.users (not auth metadata)
+        try:
+            r = sb.table("users").select("username", "email", "tier").eq("email", email).execute()
+            if r.data:
+                row = r.data[0]
+                return True, {
+                    "username": row["username"],
+                    "email":    row["email"],
+                    "tier":     row.get("tier") or "starter",
+                }
+        except Exception:
+            pass
+
+        # Fallback — user in auth but not yet in public.users (legacy / migration edge case)
+        # Derive username from email prefix so login still works while the row is backfilled
+        username = email.split("@")[0]
+        return True, {
+            "username": username,
+            "email":    email,
+            "tier":     "starter",
+        }
 
     # ── Local SQLite fallback ───────────────────────────────────────────────
     _init_sqlite()
@@ -164,32 +196,13 @@ def verify_user(email: str, password: str):
 
 def _get_email_from_auth(sb, username: str) -> str | None:
     """
-    Look up a user's email from auth.users by matching user_metadata.username.
-    Requires a service-role key (anon key cannot list users).
-    Returns email string or None.
+    DEPRECATED — kept for migration compatibility only.
+    Look up a user's email from public.users by username (no service-role key needed).
     """
     try:
-        # Try admin listing — only works with service-role key
-        from supabase import Client
-        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-        if service_key:
-            svc_url = os.environ.get("SUPABASE_URL")
-            svc = create_client(svc_url, service_key)
-            # List all users (paginated)
-            page = svc.auth.admin.list_users()
-            for u in page.users:
-                if u.user_metadata.get("username") == username:
-                    return u.email
-        # If no service key, try to get email from the session if already logged in
-        # For login, we need another approach: store username→email mapping in a
-        # public 'auth_lookup' table with no RLS (only writable by admin/service-role)
-        # Check if such a table exists
-        try:
-            r = sb.table("auth_lookup").select("email").eq("username", username).execute()
-            if r.data:
-                return r.data[0]["email"]
-        except Exception:
-            pass
+        r = sb.table("users").select("email").eq("username", username).execute()
+        if r.data:
+            return r.data[0]["email"]
     except Exception:
         pass
     return None
@@ -209,9 +222,18 @@ def get_user_by_username(username: str) -> dict | None:
                     "tier": row[3], "subscription_status": row[4]}
         return None
 
-    email = _get_email_from_auth(sb, username)
-    if email:
-        return {"username": username, "email": email}
+    # Cloud: query public.users directly by username (no service-role key needed)
+    try:
+        r = sb.table("users").select("username", "email", "tier").eq("username", username).execute()
+        if r.data:
+            row = r.data[0]
+            return {
+                "username": row["username"],
+                "email":    row["email"],
+                "tier":     row.get("tier") or "starter",
+            }
+    except Exception:
+        pass
     return None
 
 
