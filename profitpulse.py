@@ -3048,6 +3048,12 @@ def _main_impl() -> None:
     # After that, session state is the source of truth — don't overwrite it.
     # This prevents newly added entries from being wiped by a stale reload.
     import users as user_db
+    # TEMP: Supabase connection diagnostic
+    _sb_check = user_db._get_supabase()
+    if _sb_check is None:
+        st.error("⚠️ DIAGNOSTIC: Supabase client is None — check SUPABASE_URL and SUPABASE_KEY in secrets")
+    else:
+        st.success("✅ DIAGNOSTIC: Supabase connected")
     username = st.session_state.get("username", "")
     if username and not st.session_state.get("_data_loaded", False):
         st.session_state.df_sales     = user_db.load_user_data(username, "sales")
