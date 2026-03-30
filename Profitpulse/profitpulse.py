@@ -1609,37 +1609,42 @@ def page_data_input() -> None:
             else:
                 st.info("👆 Tap Scan Receipt to auto-fill the form below.")
 
-            # Form fields
+            # Form fields (dynamic keys so widgets reset when scan data updates)
             r1, r2 = st.columns(2)
             with r1:
+                vendor_key = f"rec_vendor_f_{d_vendor}"
                 rec_vendor = st.text_input(
                     "Vendor / Store",
                     value=d_vendor,
                     placeholder="e.g., Home Depot, Sysco",
-                    key="rec_vendor_f"
+                    key=vendor_key
                 )
             with r2:
-                rec_date = st.date_input("Date", value=d_date_val, key="rec_date_f")
+                date_key = f"rec_date_f_{d_date}"
+                rec_date = st.date_input("Date", value=d_date_val, key=date_key)
 
             r3, r4 = st.columns(2)
             with r3:
+                amount_key = f"rec_amount_f_{d_vendor}_{d_amount}"
                 rec_amount = st.number_input(
                     "Total Amount ($)",
                     min_value=0.0, step=0.01,
                     value=float(d_amount) if d_amount else 0.0,
-                    key="rec_amount_f"
+                    key=amount_key
                 )
             with r4:
+                category_key = f"rec_category_f_{d_cat}"
                 rec_category = st.selectbox(
                     "Category", EXPENSE_CATEGORIES,
-                    index=cat_idx, key="rec_category_f"
+                    index=cat_idx, key=category_key
                 )
 
+            desc_key = f"rec_desc_f_{d_vendor}"
             rec_desc = st.text_input(
                 "Description (optional)",
                 value=d_desc,
                 placeholder="What was this for?",
-                key="rec_desc_f"
+                key=desc_key
             )
 
             # Action buttons
