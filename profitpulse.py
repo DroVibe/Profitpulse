@@ -1728,6 +1728,9 @@ def page_data_input() -> None:
                     st.write("DEBUG df_sales rows:", len(st.session_state.df_sales))
                     st.write("DEBUG df_sales sample:", st.session_state.df_sales.tail(3).to_dict())
                     ok = save_all_user_data()
+                    import users as _u
+                    sb_test = _u._get_supabase()
+                    st.write("DEBUG supabase client:", "CONNECTED" if sb_test is not None else "NONE - falling back to SQLite")
                     st.write("DEBUG save_all_user_data returned:", ok)
                     if ok:
                         _compute_pnl.clear()
