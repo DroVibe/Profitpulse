@@ -293,7 +293,9 @@ def _data_table_name(data_type: str, username: str) -> str:
 
 
 def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
-    """Save user's data to a per-user table (e.g. sales_johndoe). Returns True on success."""
+    """Save user's data to the shared Supabase table (user_sales, etc.).
+    Uses DELETE + INSERT with username column to isolate per-user rows.
+    Returns True on success."""
     sb = _get_supabase()
     table_map = {
         "sales": "user_sales", "purchases": "user_purchases",
@@ -310,17 +312,17 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
             records.append(r)
 
     if sb is not None:
-        tname = _data_table_name(data_type, username)
+        # FIX: use the shared table name from table_map, NOT _data_table_name()
+        tname = table_map[data_type]
         try:
             # Delete then insert — all-or-nothing semantics
             sb.table(tname).delete().eq("username", username).execute()
-        except Exception as exc:
+        except Exception:
             return False  # Delete failed — abort rather than lose data
         if records:
             try:
-                # FIX: use same per-user table name as the delete above
                 sb.table(tname).insert(records).execute()
-            except Exception as exc:
+            except Exception:
                 return False  # Insert failed — data not saved
         return True
 
@@ -346,7 +348,8 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
 
 
 def load_user_data(username: str, data_type: str) -> pd.DataFrame:
-    """Load user's data. Always returns pd.DataFrame."""
+    """Load user's data from the shared Supabase table.
+    Filters by username column. Always returns pd.DataFrame (never None)."""
     sb = _get_supabase()
     table_map = {
         "sales": "user_sales", "purchases": "user_purchases",
@@ -356,9 +359,10 @@ def load_user_data(username: str, data_type: str) -> pd.DataFrame:
         return pd.DataFrame()
 
     if sb is not None:
-        tname = _data_table_name(data_type, username)
+        # FIX: use shared table name AND filter by username (prevents data leak)
+        tname = table_map[data_type]
         try:
-            r = sb.table(tname).select("*").execute()
+            r = sb.table(tname).select("*").eq("username", username).execute()
             if r.data:
                 df = pd.DataFrame(r.data)
                 return df.drop(columns=["id", "user_id"], errors="ignore")
