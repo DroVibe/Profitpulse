@@ -1298,8 +1298,7 @@ def scan_receipt_with_ai(uploaded_file) -> dict | None:
         return result
 
     except Exception as e:
-        import streamlit as st
-        st.session_state["_receipt_scan_error"] = str(e)
+        print(f"Receipt scan error: {e}")
         return None
 
 
@@ -1677,12 +1676,6 @@ def page_data_input() -> None:
                 else:
                     with st.spinner("📷 Reading your receipt…"):
                         result = scan_receipt_with_ai(uploaded_file)
-                    # TEMP DEBUG
-                    err = st.session_state.pop("_receipt_scan_error", None)
-                    if err:
-                        st.error(f"Scan error: {err}")
-                    else:
-                        st.info(f"Scan returned: {result}")
                     if result and result.get("vendor"):
                         _s["_r_vendor"] = result.get("vendor", "")
                         _s["_r_category"] = (
