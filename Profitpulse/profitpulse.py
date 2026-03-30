@@ -29,7 +29,7 @@ APP_NAME  = "ProfitPulse"
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
 MODEL      = "e2ee-qwen-2-5-7b-p"
-VISION_MODEL = "mistral-31-24b"  # Venice mid-tier vision model — sufficient for receipt OCR, cost-effective
+VISION_MODEL = "qwen3-vl-235b-a22b"  # Venice's confirmed vision-capable model
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
