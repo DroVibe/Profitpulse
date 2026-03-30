@@ -537,7 +537,7 @@ def pnl_row(label: str, amount: float, pct: str = "", total: bool = False) -> No
 
 
 PLAN_LABELS = {
-    "free": "ProfitPulse Starter",
+    "free": "ProfitPulse Free",
     "starter": "ProfitPulse Starter",
     "pro": "ProfitPulse Complete",
     "complete": "ProfitPulse Complete",
@@ -635,6 +635,7 @@ CHART_LAYOUT = dict(
 # AUTH
 # ────────────────────────────────────────────────
 def login_page() -> None:
+    st.write("🔧 BUILD: March 30 v2")
     import users  # User management module
     
     _, col, _ = st.columns([1, 1.2, 1])
@@ -737,7 +738,7 @@ def login_page() -> None:
                         # Auto-log in the new user immediately
                         st.session_state.authenticated = True
                         st.session_state.username     = new_user
-                        st.session_state.user_tier   = "starter"
+                        st.session_state.user_tier   = "free"
                         _ensure_dfs()
                         # Initialize default business type so onboarding doesn't
                         # re-trigger after signup (user already picked industry)
@@ -757,6 +758,12 @@ def login_page() -> None:
 
 
 def logout() -> None:
+    # Save all data before wiping session — skip for demo (no DB account)
+    if st.session_state.get("authenticated") and st.session_state.get("user_tier") not in {"demo"}:
+        username = st.session_state.get("username", "")
+        if username:
+            # save_all_user_data() persists all four dataframes in one call
+            save_all_user_data()
     # Wipe entire session on sign-out for security
     for key in list(st.session_state.keys()):
         del st.session_state[key]
@@ -1684,13 +1691,15 @@ def page_data_input() -> None:
                     # Clear scan cache
                     for k in ("_r_vendor","_r_amount","_r_category","_r_desc","_r_date"):
                         _s.pop(k, None)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast(
-                        f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
-                        icon="✅"
-                    )
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast(
+                            f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
+                            icon="✅"
+                        )
+                    else:
+                        st.warning("Receipt saved to this session but failed to persist to the database. Please try again or contact support.")
                     st.rerun()
 
     # ── Manual Entry ────────────────────────────
@@ -1715,10 +1724,21 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Sale added ✓", icon="✅")
+                    # TEMP DEBUG
+                    st.write("DEBUG username:", st.session_state.get("username"))
+                    st.write("DEBUG df_sales rows:", len(st.session_state.df_sales))
+                    st.write("DEBUG df_sales sample:", st.session_state.df_sales.tail(3).to_dict())
+                    ok = save_all_user_data()
+                    import users as _u
+                    sb_test = _u._get_supabase()
+                    st.write("DEBUG supabase client:", "CONNECTED" if sb_test is not None else "NONE - falling back to SQLite")
+                    st.write("DEBUG save_all_user_data returned:", ok)
+                    if ok:
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Sale added ✓", icon="✅")
+                    else:
+                        st.warning("Sale added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     with tab_p:
@@ -1737,10 +1757,12 @@ def page_data_input() -> None:
                                          "amount": p_amt, "description": p_desc}])
                     st.session_state.df_purchases = pd.concat(
                         [st.session_state.df_purchases, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Purchase added ✓", icon="✅")
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Purchase added ✓", icon="✅")
+                    else:
+                        st.warning("Purchase added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     with tab_e:
@@ -1756,10 +1778,18 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
-                save_all_user_data()
-                _compute_pnl.clear()
-                calculate_pnl()
-                st.toast("Expense added ✓", icon="✅")
+                # TEMP DEBUG
+                st.write("DEBUG username:", st.session_state.get("username"))
+                st.write("DEBUG df_expenses rows:", len(st.session_state.df_expenses))
+                st.write("DEBUG df_expenses sample:", st.session_state.df_expenses.tail(3).to_dict())
+                ok = save_all_user_data()
+                st.write("DEBUG save_all_user_data returned:", ok)
+                if ok:
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Expense added ✓", icon="✅")
+                else:
+                    st.warning("Expense added to this session but failed to save to the database. Please try again or contact support.")
                 st.rerun()
 
     with tab_l:
@@ -1781,10 +1811,12 @@ def page_data_input() -> None:
                                          "hours": l_hrs, "rate": l_rate, "description": l_desc}])
                     st.session_state.df_labor = pd.concat(
                         [st.session_state.df_labor, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Shift added ✓", icon="✅")
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Shift added ✓", icon="✅")
+                    else:
+                        st.warning("Shift added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
@@ -2934,6 +2966,7 @@ def render_sidebar() -> str:
             st.session_state.last_calculated = None
             st.session_state.onboarded       = False
             st.session_state.business_type   = None
+            st.session_state["_data_loaded"] = False
             st.session_state.nav_page        = "Overview"
             st.session_state.onboarding_step = 0
             _compute_pnl.clear()
@@ -3012,13 +3045,18 @@ def _main_impl() -> None:
     # Render theme toggle in sidebar
     render_theme_toggle()
 
-    # Load user data from DB on every page load — this is the single source of truth
-    # for persistence. The login handler also loads, but this catches:
-    #  - users who skip onboarding and never triggered the login data path
-    #  - users whose session state was reset (worker recycle, browser reopen)
+    # Load user data ONCE per session (on first authenticated render only).
+    # After that, session state is the source of truth — don't overwrite it.
+    # This prevents newly added entries from being wiped by a stale reload.
     import users as user_db
+    # TEMP: Supabase connection diagnostic
+    _sb_check = user_db._get_supabase()
+    if _sb_check is None:
+        st.error("⚠️ DIAGNOSTIC: Supabase client is None — check SUPABASE_URL and SUPABASE_KEY in secrets")
+    else:
+        st.success("✅ DIAGNOSTIC: Supabase connected")
     username = st.session_state.get("username", "")
-    if username:
+    if username and not st.session_state.get("_data_loaded", False):
         st.session_state.df_sales     = user_db.load_user_data(username, "sales")
         st.session_state.df_purchases = user_db.load_user_data(username, "purchases")
         st.session_state.df_expenses  = user_db.load_user_data(username, "expenses")
@@ -3030,6 +3068,7 @@ def _main_impl() -> None:
         # Refresh P&L cache so loaded data shows in charts immediately
         _compute_pnl.clear()
         calculate_pnl()
+        st.session_state["_data_loaded"] = True
 
     # Show onboarding for brand-new users with no data
     if not st.session_state.onboarded and st.session_state.df_sales.empty:
