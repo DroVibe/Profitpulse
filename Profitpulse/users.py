@@ -147,21 +147,34 @@ def verify_user(email: str, password: str):
     """
     Verify credentials via Supabase Auth, then look up username + tier
     from public.users (filtered by email).
-    Returns (True, dict) on success, (False, None) on failure.
+    Returns (True, dict) on success, (False, error_message) on failure.
     Dict shape: {"username": str, "email": str, "tier": str}
     """
     sb = _get_supabase()
 
     if sb is not None:
+        auth_error = None
         # Step A — authenticate via Supabase Auth
         try:
             sess = sb.auth.sign_in_with_password({"email": email, "password": password})
             if sess.user is None:
-                return False, None
-        except Exception:
-            return False, None
+                auth_error = "Login failed. Please try again."
+        except Exception as e:
+            auth_error = str(e)
 
-        # Step B — look up username and tier from public.users (not auth metadata)
+        if auth_error:
+            # Check whether this email exists in public.users.
+            # If yes: auth failed but the user account exists — something is wrong.
+            # If no: the email is simply not registered.
+            try:
+                r = sb.table("users").select("username").eq("email", email).execute()
+                if r.data:
+                    return False, "Login failed. Please contact support."
+            except Exception:
+                pass
+            return False, "Invalid credentials."
+
+        # Step B — look up username and tier from public.users
         try:
             r = sb.table("users").select("username", "email", "tier").eq("email", email).execute()
             if r.data:
@@ -169,18 +182,17 @@ def verify_user(email: str, password: str):
                 return True, {
                     "username": row["username"],
                     "email":    row["email"],
-                    "tier":     row.get("tier") or "starter",
+                    "tier":     row.get("tier") or "free",
                 }
         except Exception:
             pass
 
-        # Fallback — user in auth but not yet in public.users (legacy / migration edge case)
-        # Derive username from email prefix so login still works while the row is backfilled
+        # Auth succeeded but public.users row missing — edge case, derive from email
         username = email.split("@")[0]
         return True, {
             "username": username,
             "email":    email,
-            "tier":     "starter",
+            "tier":     "free",
         }
 
     # ── Local SQLite fallback ───────────────────────────────────────────────
