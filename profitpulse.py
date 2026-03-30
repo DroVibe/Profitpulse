@@ -635,6 +635,7 @@ CHART_LAYOUT = dict(
 # AUTH
 # ────────────────────────────────────────────────
 def login_page() -> None:
+    st.write("🔧 BUILD: March 30 v2")
     import users  # User management module
     
     _, col, _ = st.columns([1, 1.2, 1])
