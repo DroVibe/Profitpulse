@@ -29,7 +29,7 @@ APP_NAME  = "ProfitPulse"
 API_KEY  = None
 BASE_URL = "https://api.venice.ai/api/v1"
 MODEL      = "e2ee-qwen-2-5-7b-p"
-VISION_MODEL = "qwen3-vl-235b-a22b"  # Venice's fastest vision model for receipt/OCR
+VISION_MODEL = "qwen-2-5-vl-7b"  # Venice vision model for receipt/OCR
 DEMO_USER = "admin"
 DEMO_PASS = "pilot2026"
 
@@ -1254,72 +1254,52 @@ def _preprocess_image(file_bytes: bytes) -> bytes:
 
 
 def scan_receipt_with_ai(uploaded_file) -> dict | None:
-    """Send a receipt image to Venice AI and return structured data dict.
-    
-    Auto-rotates + resizes image before sending. Uses the Venice vision model.
-    Times out after 30 seconds to prevent the UI from hanging.
-    Returns: {"vendor", "date", "amount", "category", "description"} or None on failure.
-    """
+    """Send receipt image to Venice AI. Returns structured dict or None."""
     import base64
     import json
-    import threading
 
     api_key = get_api_key()
     if not api_key:
         return None
 
-    result_holder = [None]  # thread-safe container
-    exception_holder = [None]
+    try:
+        file_bytes = uploaded_file.getvalue()
+        processed_bytes = _preprocess_image(file_bytes)
+        b64_data = base64.b64encode(processed_bytes).decode("utf-8")
+        data_url = f"data:image/jpeg;base64,{b64_data}"
 
-    def _do_scan():
-        try:
-            file_bytes = uploaded_file.getvalue()
-            processed_bytes = _preprocess_image(file_bytes)
-            mime_type = "image/jpeg"
-            b64_data  = base64.b64encode(processed_bytes).decode("utf-8")
-            data_url  = f"data:{mime_type};base64,{b64_data}"
+        client = OpenAI(
+            api_key=api_key,
+            base_url=BASE_URL,
+            timeout=60,
+        )
+        response = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": _receipt_extraction_prompt()},
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                    ],
+                }
+            ],
+            max_tokens=400,
+            temperature=0.1,
+        )
 
-            client = OpenAI(
-                api_key=api_key,
-                base_url=BASE_URL,
-                timeout=30,  # 30-second timeout
-            )
-            response = client.chat.completions.create(
-                model=VISION_MODEL,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text",     "text": _receipt_extraction_prompt()},
-                            {"type": "image_url", "image_url": {"url": data_url}},
-                        ],
-                    }
-                ],
-                max_tokens=400,
-                temperature=0.1,
-            )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            lines = raw.splitlines()
+            raw = "\n".join(lines[1:-1])
+        result = json.loads(raw)
+        if result.get("error"):
+            return None
+        return result
 
-            raw = response.choices[0].message.content.strip()
-            if raw.startswith("```"):
-                lines = raw.splitlines()
-                raw = "\n".join(lines[1:-1])
-            result_holder[0] = json.loads(raw)
-        except Exception as exc:
-            exception_holder[0] = exc
-
-    t = threading.Thread(target=_do_scan)
-    t.start()
-    t.join(timeout=35)  # Hard timeout at 35s (covers API + preprocessing)
-    if t.is_alive():
-        return None  # Timed out — return None, user fills manually
-
-    if exception_holder[0] is not None:
+    except Exception as e:
+        print(f"Receipt scan error: {e}")
         return None
-
-    result = result_holder[0]
-    if result is None or result.get("error"):
-        return None
-    return result
 
 
 def _ai_pulse_prompt() -> str:
@@ -1722,6 +1702,40 @@ def page_data_input() -> None:
                             "⚠️ Couldn't read this receipt clearly. "
                             "Fill in the fields manually — it only takes a moment."
                         )
+
+            # Save handler
+            if save_clicked:
+                if rec_amount <= 0:
+                    st.warning("Please enter a valid amount.")
+                else:
+                    desc_text = f"Receipt: {rec_vendor}" if rec_vendor else "Receipt"
+                    if rec_desc:
+                        desc_text += f" — {rec_desc}"
+                    row = pd.DataFrame([{
+                        "date":        str(rec_date),
+                        "category":    rec_category,
+                        "amount":      rec_amount,
+                        "description": desc_text,
+                    }])
+                    if st.session_state.df_expenses.empty:
+                        st.session_state.df_expenses = row
+                    else:
+                        st.session_state.df_expenses = pd.concat(
+                            [st.session_state.df_expenses, row], ignore_index=True)
+                    # Clear scan cache
+                    for k in ("_r_vendor", "_r_amount", "_r_category",
+                              "_r_desc", "_r_date", "_r_confidence"):
+                        _s.pop(k, None)
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast(
+                            f"✅ Saved: {rec_vendor or 'Receipt'} — ${rec_amount:,.2f}",
+                            icon="💾"
+                        )
+                    else:
+                        st.warning("Saved to session but couldn't persist to database.")
+                    st.rerun()
 
     # ── Manual Entry ────────────────────────────
     st.markdown("##### Or Enter Transactions Manually")
