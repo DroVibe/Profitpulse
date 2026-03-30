@@ -1690,13 +1690,15 @@ def page_data_input() -> None:
                     # Clear scan cache
                     for k in ("_r_vendor","_r_amount","_r_category","_r_desc","_r_date"):
                         _s.pop(k, None)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast(
-                        f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
-                        icon="✅"
-                    )
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast(
+                            f"Saved: {rec_vendor or 'Unknown'} — ${rec_amount:,.2f}",
+                            icon="✅"
+                        )
+                    else:
+                        st.warning("Receipt saved to this session but failed to persist to the database. Please try again or contact support.")
                     st.rerun()
 
     # ── Manual Entry ────────────────────────────
@@ -1721,10 +1723,12 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Sale added ✓", icon="✅")
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Sale added ✓", icon="✅")
+                    else:
+                        st.warning("Sale added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     with tab_p:
@@ -1743,10 +1747,12 @@ def page_data_input() -> None:
                                          "amount": p_amt, "description": p_desc}])
                     st.session_state.df_purchases = pd.concat(
                         [st.session_state.df_purchases, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Purchase added ✓", icon="✅")
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Purchase added ✓", icon="✅")
+                    else:
+                        st.warning("Purchase added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     with tab_e:
@@ -1762,10 +1768,12 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
-                save_all_user_data()
-                _compute_pnl.clear()
-                calculate_pnl()
-                st.toast("Expense added ✓", icon="✅")
+                if save_all_user_data():
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Expense added ✓", icon="✅")
+                else:
+                    st.warning("Expense added to this session but failed to save to the database. Please try again or contact support.")
                 st.rerun()
 
     with tab_l:
@@ -1787,10 +1795,12 @@ def page_data_input() -> None:
                                          "hours": l_hrs, "rate": l_rate, "description": l_desc}])
                     st.session_state.df_labor = pd.concat(
                         [st.session_state.df_labor, row], ignore_index=True)
-                    save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    st.toast("Shift added ✓", icon="✅")
+                    if save_all_user_data():
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        st.toast("Shift added ✓", icon="✅")
+                    else:
+                        st.warning("Shift added to this session but failed to save to the database. Please try again or contact support.")
                     st.rerun()
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
