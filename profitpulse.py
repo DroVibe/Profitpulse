@@ -1723,7 +1723,13 @@ def page_data_input() -> None:
                                          "amount": s_amt, "description": s_desc}])
                     st.session_state.df_sales = pd.concat(
                         [st.session_state.df_sales, row], ignore_index=True)
-                    if save_all_user_data():
+                    # TEMP DEBUG
+                    st.write("DEBUG username:", st.session_state.get("username"))
+                    st.write("DEBUG df_sales rows:", len(st.session_state.df_sales))
+                    st.write("DEBUG df_sales sample:", st.session_state.df_sales.tail(3).to_dict())
+                    ok = save_all_user_data()
+                    st.write("DEBUG save_all_user_data returned:", ok)
+                    if ok:
                         _compute_pnl.clear()
                         calculate_pnl()
                         st.toast("Sale added ✓", icon="✅")
@@ -1768,7 +1774,13 @@ def page_data_input() -> None:
                                      "amount": e_amt, "description": e_desc}])
                 st.session_state.df_expenses = pd.concat(
                     [st.session_state.df_expenses, row], ignore_index=True)
-                if save_all_user_data():
+                # TEMP DEBUG
+                st.write("DEBUG username:", st.session_state.get("username"))
+                st.write("DEBUG df_expenses rows:", len(st.session_state.df_expenses))
+                st.write("DEBUG df_expenses sample:", st.session_state.df_expenses.tail(3).to_dict())
+                ok = save_all_user_data()
+                st.write("DEBUG save_all_user_data returned:", ok)
+                if ok:
                     _compute_pnl.clear()
                     calculate_pnl()
                     st.toast("Expense added ✓", icon="✅")
