@@ -1739,7 +1739,8 @@ def page_data_input() -> None:
                         st.toast("Sale added ✓", icon="✅")
                     else:
                         st.warning("Sale added to this session but failed to save to the database. Please try again or contact support.")
-                    st.rerun()
+                    st.stop()  # TEMP: prevents rerun so debug output stays visible
+                    # st.rerun()  # commented out temporarily
 
     with tab_p:
         with st.form("add_purchase", clear_on_submit=True):
@@ -1790,7 +1791,8 @@ def page_data_input() -> None:
                     st.toast("Expense added ✓", icon="✅")
                 else:
                     st.warning("Expense added to this session but failed to save to the database. Please try again or contact support.")
-                st.rerun()
+                st.stop()  # TEMP: prevents rerun so debug output stays visible
+                # st.rerun()  # commented out temporarily
 
     with tab_l:
         with st.form("add_labor", clear_on_submit=True):
