@@ -2289,86 +2289,73 @@ def render_smart_insights(pnl: dict) -> None:
 
 
 def render_tax_deadlines(tax: dict) -> None:
-    """Render TaxShield Deadlines panel."""
+    """Render TaxShield Deadlines panel using st components."""
     import datetime as dt
     today = dt.date.today()
+
+    st.markdown("""
+    <div class="panel-container">
+    <div class="panel-header">
+    <span class="panel-title">TaxShield deadlines</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     schedule = tax.get("sales_tax", {}).get("schedule", []) if tax else []
 
     if not schedule:
-        st.markdown("""
-    <div class="panel-container">
-        <div class="panel-header">
-            <span class="panel-title">TaxShield deadlines</span>
-        </div>
-        <div class="insight-desc">Add revenue data to calculate filing deadlines.</div>
-    </div>
-    """, unsafe_allow_html=True)
-        return
-
-    deadline_items = []
-    badge_count = 0
-    for deadline in schedule[:2]:
-        due_str = deadline.get("due_window", "")
-
-        try:
-            due_date = dt.datetime.strptime(
-                due_str.split("-")[0].strip(), "%b %d, %Y").date()
-            days_left = (due_date - today).days
-            if days_left <= 7:
-                badge_cls = "pp-badge-action"
-                badge_txt = f"{days_left}d"
-                badge_count += 1
-            elif days_left <= 14:
-                badge_cls = "pp-badge-review"
-                badge_txt = f"{days_left}d"
-            else:
-                badge_cls = "pp-badge-insight"
-                badge_txt = f"{days_left}d"
-        except Exception:
-            badge_cls = "pp-badge-insight"
-            badge_txt = "Soon"
-
+        st.markdown(
+            '<div class="insight-desc">Add revenue data to '
+            'calculate filing deadlines.</div>',
+            unsafe_allow_html=True
+        )
+    else:
         county = tax.get("sales_tax", {}).get("county", "FL")
-        deadline_items.append(
-            f'<div class="deadline-item">'
-            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-            f'<div>'
-            f'<div class="deadline-title">Sales tax remittance</div>'
-            f'<div class="deadline-sub">{county} &middot; Due {due_str}</div>'
-            f'</div>'
-            f'<span class="pp-badge {badge_cls}">{badge_txt}</span>'
-            f'</div>'
-            f'</div>'
-        )
+        for deadline in schedule[:2]:
+            due_str = deadline.get("due_window", "")
+            try:
+                due_date = dt.datetime.strptime(
+                    due_str.split("-")[0].strip(), "%b %d, %Y").date()
+                days_left = (due_date - today).days
+                if days_left <= 7:
+                    badge_cls = "pp-badge-action"
+                elif days_left <= 14:
+                    badge_cls = "pp-badge-review"
+                else:
+                    badge_cls = "pp-badge-insight"
+                badge_txt = f"{days_left}d"
+            except Exception:
+                badge_cls = "pp-badge-insight"
+                badge_txt = "Soon"
 
-    corp_tax = tax.get("corporate_tax", {})
-    if corp_tax.get("annual_corporate_tax", 0) > 0:
-        deadline_items.append(
-            f'<div class="deadline-item">'
-            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-            f'<div>'
-            f'<div class="deadline-title">Quarterly estimate</div>'
-            f'<div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>'
-            f'</div>'
-            f'<span class="pp-badge pp-badge-review">Q2</span>'
-            f'</div>'
-            f'</div>'
-        )
+            st.markdown(f"""
+            <div class="deadline-item">
+            <div style="display:flex;justify-content:space-between;
+            align-items:flex-start;">
+            <div>
+            <div class="deadline-title">Sales tax remittance</div>
+            <div class="deadline-sub">{county} &middot; Due {due_str}</div>
+            </div>
+            <span class="pp-badge {badge_cls}">{badge_txt}</span>
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    badge_html = (f'<span class="pp-badge pp-badge-action">'
-                  f'{badge_count} due soon</span>'
-                 if badge_count > 0 else "")
+        corp_tax = tax.get("corporate_tax", {})
+        if corp_tax.get("annual_corporate_tax", 0) > 0:
+            st.markdown("""
+            <div class="deadline-item">
+            <div style="display:flex;justify-content:space-between;
+            align-items:flex-start;">
+            <div>
+            <div class="deadline-title">Quarterly estimate</div>
+            <div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>
+            </div>
+            <span class="pp-badge pp-badge-review">Q2</span>
+            </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="panel-container">
-        <div class="panel-header">
-            <span class="panel-title">TaxShield deadlines</span>
-            {badge_html}
-        </div>
-        {"".join(deadline_items)}
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def page_overview() -> None:
@@ -2485,20 +2472,24 @@ def page_overview() -> None:
             n_months = len(monthly)
             period_label = f"Last {n_months} months"
 
+            # Ensure month column is clean string for display
+            chart_monthly = monthly.copy()
+            chart_monthly["month"] = chart_monthly["month"].astype(str)
+
             fig = go.Figure()
             colors = [f"rgba(59,130,246,{0.5 + 0.5 * (i/max(len(monthly)-1,1))})"
                       for i in range(len(monthly))]
             fig.add_trace(go.Bar(
-                x=monthly["month"].astype(str),
-                y=monthly["revenue"],
+                x=chart_monthly["month"],
+                y=chart_monthly["revenue"],
                 name="Revenue",
                 marker_color=colors,
                 marker_cornerradius=6,
             ))
             if "net_profit" in monthly.columns:
                 fig.add_trace(go.Scatter(
-                    x=monthly["month"].astype(str),
-                    y=monthly["net_profit"],
+                    x=chart_monthly["month"],
+                    y=chart_monthly["net_profit"],
                     name="Net Profit",
                     line=dict(color="#34D399", width=2.5),
                     mode="lines+markers",
