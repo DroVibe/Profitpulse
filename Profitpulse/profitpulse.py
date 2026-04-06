@@ -2266,7 +2266,7 @@ def page_overview() -> None:
         else:
             st.caption("Load more data to unlock the overview trend chart.")
 
-        panel_a, panel_b, panel_c = st.columns(3)
+        panel_a, panel_b = st.columns(2)
         with panel_a:
             st.markdown("##### 📊 Continue to Analytics")
             if st.button("Open Analytics →", use_container_width=True, key="overview_to_analytics"):
@@ -2284,48 +2284,6 @@ def page_overview() -> None:
                 st.caption(f"{tax['sales_tax']['filing_frequency_label']} filing")
             else:
                 st.caption("Add data to calculate")
-        with panel_c:
-            st.markdown("##### 💎 Plan benefits")
-            if complete:
-                st.success("✅ Complete — TaxShield unlocked")
-            else:
-                st.markdown("**What's included in each plan:**")
-                starter_benefits = [
-                    "✅ Analytics dashboard",
-                    "✅ Revenue / expense / margin tracking",
-                    "✅ Gross & net margin calculations",
-                    "✅ Business health insights",
-                    "✅ Demo data included",
-                ]
-                complete_benefits = [
-                    "✅ Everything in Starter",
-                    "✅ 🛡️ TaxShield — real-time tax estimate",
-                    "✅ County-aware FL sales tax",
-                    "✅ Quarterly filing schedule",
-                    "✅ Annual tax projection",
-                ]
-                for b in starter_benefits:
-                    st.markdown(f"<span style='font-size:12.5px;color:#CBD5E1'>{b}</span>",
-                                unsafe_allow_html=True)
-                st.markdown("---")
-                for b in complete_benefits:
-                    st.markdown(f"<span style='font-size:12.5px;color:#93C5FD'>{b}</span>",
-                                unsafe_allow_html=True)
-                st.markdown("---")
-                user_tier = st.session_state.get("user_tier", "free")
-                is_free = user_tier in {"free", "demo"}
-                if is_free:
-                    st.link_button("Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01",
-                                   use_container_width=True)
-                    st.markdown("<span style='font-size:11px;color:#64748B'>or </span>",
-                                unsafe_allow_html=True)
-                    st.link_button("Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
-                                   use_container_width=True)
-                else:
-                    st.link_button("Upgrade to Complete — $29/mo",
-                                   "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
-                                   use_container_width=True)
-
     with right:
         st.markdown("##### What to do next")
         
@@ -2601,6 +2559,31 @@ def page_settings() -> None:
         st.text_input("Tax filing frequency", value=st.session_state.tax_filing.title(), disabled=True)
 
     st.caption("Settings should later become the home for business profile, county/location, and notification preferences.")
+
+    st.markdown("---")
+    st.markdown("##### ⚠️ Data Management")
+    st.caption("Danger zone — these actions cannot be undone.")
+    if st.button("🗑 Clear all data", type="secondary", use_container_width=False):
+        for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
+            st.session_state[key] = pd.DataFrame()
+        username = st.session_state.get("username", "")
+        if username and username != "admin":
+            import users as user_db
+            user_db.save_user_data(username, "sales", pd.DataFrame())
+            user_db.save_user_data(username, "purchases", pd.DataFrame())
+            user_db.save_user_data(username, "expenses", pd.DataFrame())
+            user_db.save_user_data(username, "labor", pd.DataFrame())
+        st.session_state.chat_history    = []
+        st.session_state.pnl_cache       = {}
+        st.session_state.last_calculated = None
+        st.session_state.onboarded       = False
+        st.session_state.business_type    = None
+        st.session_state["_data_loaded"] = False
+        st.session_state.nav_page        = "Overview"
+        st.session_state.onboarding_step = 0
+        _compute_pnl.clear()
+        st.toast("All data cleared.", icon="🗑")
+        st.rerun()
 
 
 # ────────────────────────────────────────────────
@@ -2927,21 +2910,6 @@ def render_sidebar() -> str:
         # Prevents pending nav from being stomped if user also clicks a selectbox option.
         if page != st.session_state.get("nav_page", ""):
             st.session_state.nav_page = page
-        # ── Quick Actions (prominent row) ───────
-        st.markdown("### Quick Actions")
-        st.caption("One-click access to key tools")
-        
-        qa1, qa2, qa3 = st.columns(3)
-        with qa1:
-            if st.button("📁 Data Input", use_container_width=True, key="qa_data"):
-                jump_to("Data Input")
-        with qa2:
-            if st.button("🤖 AI Advisor", use_container_width=True, key="qa_ai_btn"):
-                jump_to("AI Advisor")
-        with qa3:
-            if st.button("📤 Export", use_container_width=True, key="qa_export"):
-                jump_to("Export")
-
         # ── AI Pulse ────────────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
         with st.expander("🤖 AI Pulse", expanded=True):
@@ -2974,30 +2942,6 @@ def render_sidebar() -> str:
                 st.caption(f"P&L last run: {st.session_state.last_calculated}")
         else:
             st.caption("No data loaded")
-
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-        if st.button("🗑 Clear all data", use_container_width=True):
-            for key in ["df_sales", "df_purchases", "df_expenses", "df_labor"]:
-                st.session_state[key] = pd.DataFrame()
-            # Clear from database for non-demo users
-            username = st.session_state.get("username", "")
-            if username and username != "admin":
-                import users as user_db
-                user_db.save_user_data(username, "sales", pd.DataFrame())
-                user_db.save_user_data(username, "purchases", pd.DataFrame())
-                user_db.save_user_data(username, "expenses", pd.DataFrame())
-                user_db.save_user_data(username, "labor", pd.DataFrame())
-            st.session_state.chat_history    = []
-            st.session_state.pnl_cache       = {}
-            st.session_state.last_calculated = None
-            st.session_state.onboarded       = False
-            st.session_state.business_type   = None
-            st.session_state["_data_loaded"] = False
-            st.session_state.nav_page        = "Overview"
-            st.session_state.onboarding_step = 0
-            _compute_pnl.clear()
-            st.rerun()
 
         # ── PWA Install Guide ─────────────────────
         st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)

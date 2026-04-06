@@ -345,34 +345,25 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     if data_type not in table_map:
         return False
 
-    import math
     records = []
     if df is not None:
         for _, row in df.iterrows():
-            r = {}
-            for k, v in row.to_dict().items():
-                if k in ("id", "user_id"):
-                    continue
-                # Replace NaN/inf with None (JSON null) so Supabase accepts it
-                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-                    r[k] = None
-                else:
-                    r[k] = v
+            r = {k: v for k, v in row.to_dict().items() if k not in ("id", "user_id")}
             r["username"] = username
             records.append(r)
 
     if sb is not None:
-        # FIX: use the shared table name from table_map, NOT _data_table_name()
         tname = table_map[data_type]
         try:
+            # Delete then insert — all-or-nothing semantics
             sb.table(tname).delete().eq("username", username).execute()
         except Exception as e:
-            raise RuntimeError(f"DELETE failed on {tname} for {username}: {e}")
+            return False  # Delete failed — abort rather than lose data
         if records:
             try:
                 sb.table(tname).insert(records).execute()
             except Exception as e:
-                raise RuntimeError(f"INSERT failed on {tname} for {username}: {e}")
+                return False  # Insert failed — data not saved
         return True
 
     # SQLite fallback
