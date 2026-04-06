@@ -2197,95 +2197,299 @@ def page_dashboard() -> None:
             st.plotly_chart(fig, use_container_width=True)
 
 
+def render_smart_insights(pnl: dict) -> None:
+    """Render Smart Insights panel — data-driven, no API call."""
+    import datetime as dt
+
+    # Determine overall health score
+    issues = 0
+    if pnl.get("net_profit", 0) < 0: issues += 2
+    if pnl.get("gross_margin_pct", 0) < BENCHMARKS["gross_margin_pct"]: issues += 1
+    if pnl.get("labor_pct", 0) > BENCHMARKS["labor_pct_of_revenue"]: issues += 1
+    if pnl.get("overtime_count", 0) > 0: issues += 1
+
+    if issues == 0:
+        health, badge_cls = "Healthy", "pp-badge-healthy"
+    elif issues <= 1:
+        health, badge_cls = "Good", "pp-badge-insight"
+    elif issues <= 2:
+        health, badge_cls = "Review", "pp-badge-review"
+    else:
+        health, badge_cls = "Action needed", "pp-badge-action"
+
+    # Generate insights from data
+    insights = []
+
+    monthly = pnl.get("monthly", pd.DataFrame())
+    if len(monthly) >= 2 and "gross_margin_pct" in monthly.columns:
+        last_two = monthly.tail(2)["gross_margin_pct"].values
+        diff = last_two[-1] - last_two[-2]
+        if diff > 0:
+            insights.append({
+                "title": f"Margin up {diff:.1f}pp this month",
+                "desc": f"Gross margin improved to {last_two[-1]:.1f}%",
+                "badge": "Insight", "badge_cls": "pp-badge-insight"
+            })
+        elif diff < 0:
+            insights.append({
+                "title": f"Margin slipped {abs(diff):.1f}pp",
+                "desc": "Review COGS or pricing",
+                "badge": "Action", "badge_cls": "pp-badge-action"
+            })
+
+    if pnl.get("overtime_count", 0) > 0:
+        ot_cost = round(pnl.get("total_labor", 0) * (pnl.get("overtime_pct", 0) / 100) * 0.5)
+        insights.append({
+            "title": f"{pnl['overtime_count']} overtime shifts detected",
+            "desc": f"~${ot_cost:,.0f} in premium labor costs",
+            "badge": "Review", "badge_cls": "pp-badge-review"
+        })
+
+    if pnl.get("net_profit", 0) > 0:
+        insights.append({
+            "title": "Business is profitable",
+            "desc": f"Net margin: {pnl.get('net_margin_pct', 0):.1f}%",
+            "badge": "Healthy", "badge_cls": "pp-badge-healthy"
+        })
+    elif pnl.get("net_profit", 0) < 0:
+        insights.append({
+            "title": "Running at a loss",
+            "desc": "Review expenses immediately",
+            "badge": "Action", "badge_cls": "pp-badge-action"
+        })
+
+    # Cap at 3 insights
+    insights = insights[:3]
+    if not insights:
+        insights = [{"title": "Add more data for insights",
+                     "desc": "Upload sales and expenses to unlock",
+                     "badge": "Info", "badge_cls": "pp-badge-insight"}]
+
+    cards_html = ""
+    for ins in insights:
+        cards_html += f"""
+    <div class="insight-card">
+        <div style="display:flex; justify-content:space-between;
+        align-items:flex-start; margin-bottom:4px;">
+            <div class="insight-title">{ins['title']}</div>
+            <span class="pp-badge {ins['badge_cls']}">{ins['badge']}</span>
+        </div>
+        <div class="insight-desc">{ins['desc']}</div>
+    </div>"""
+
+    st.markdown(f"""
+    <div class="panel-container">
+        <div class="panel-header">
+            <span class="panel-title">Smart insights</span>
+            <span class="pp-badge {badge_cls}">{health}</span>
+        </div>
+        {cards_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_tax_deadlines(tax: dict) -> None:
+    """Render TaxShield Deadlines panel."""
+    import datetime as dt
+    today = dt.date.today()
+
+    schedule = tax.get("sales_tax", {}).get("schedule", []) if tax else []
+
+    if not schedule:
+        st.markdown("""
+    <div class="panel-container">
+        <div class="panel-header">
+            <span class="panel-title">TaxShield deadlines</span>
+        </div>
+        <div class="insight-desc">Add revenue data to calculate filing deadlines.</div>
+    </div>
+    """, unsafe_allow_html=True)
+        return
+
+    items_html = ""
+    badge_count = 0
+    for deadline in schedule[:2]:
+        due_str = deadline.get("due_window", "")
+        period = deadline.get("period", "")
+        amount = deadline.get("estimated_tax", 0)
+
+        try:
+            due_date = dt.datetime.strptime(
+                due_str.split("-")[0].strip(), "%b %d, %Y").date()
+            days_left = (due_date - today).days
+            if days_left <= 7:
+                badge_cls = "pp-badge-action"
+                badge_txt = f"{days_left}d"
+                badge_count += 1
+            elif days_left <= 14:
+                badge_cls = "pp-badge-review"
+                badge_txt = f"{days_left}d"
+            else:
+                badge_cls = "pp-badge-insight"
+                badge_txt = f"{days_left}d"
+        except Exception:
+            badge_cls = "pp-badge-insight"
+            badge_txt = "Soon"
+
+        county = tax.get("sales_tax", {}).get("county", "FL")
+        items_html += f"""
+    <div class="deadline-item">
+        <div style="display:flex; justify-content:space-between;
+        align-items:flex-start;">
+            <div>
+                <div class="deadline-title">Sales tax remittance</div>
+                <div class="deadline-sub">{county} · Due {due_str}</div>
+            </div>
+            <span class="pp-badge {badge_cls}">{badge_txt}</span>
+        </div>
+    </div>"""
+
+    corp_tax = tax.get("corporate_tax", {})
+    if corp_tax.get("annual_corporate_tax", 0) > 0:
+        items_html += f"""
+    <div class="deadline-item">
+        <div style="display:flex; justify-content:space-between;
+        align-items:flex-start;">
+            <div>
+                <div class="deadline-title">Quarterly estimate</div>
+                <div class="deadline-sub">Corporate tax · Due Apr 30</div>
+            </div>
+            <span class="pp-badge pp-badge-review">Q2</span>
+        </div>
+    </div>"""
+
+    badge_html = (f'<span class="pp-badge pp-badge-action">'
+                  f'{badge_count} due soon</span>'
+                 if badge_count > 0 else "")
+
+    st.markdown(f"""
+    <div class="panel-container">
+        <div class="panel-header">
+            <span class="panel-title">TaxShield deadlines</span>
+            {badge_html}
+        </div>
+        {items_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def page_overview() -> None:
     _ensure_dfs()
     if st.session_state.df_sales.empty:
-        st.info("No data loaded yet. Head to **Data Input** or load the demo.")
+        st.info("No data loaded yet. Head to Data Input to get started.")
+        if st.button("➕ Add your first transaction", type="primary"):
+            jump_to("Data Input")
         return
 
     pnl = calculate_pnl()
     tax = build_tax_snapshot(pnl)
-    complete = has_complete_access()
     biz_label = st.session_state.business_type or "Business"
 
-    st.markdown('<div class="page-header">Overview</div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="page-sub">Welcome back, <strong>{biz_label}</strong>'
-        ' — your business health and tax picture in one place</div>',
-        unsafe_allow_html=True,
-    )
-    if st.session_state.last_calculated:
-        st.caption(f"Last calculated: **{st.session_state.last_calculated}** · Plan: **{current_plan_label()}**")
+    # ── Page header ─────────────────────────────
+    hdr_col, ts_col = st.columns([3, 1])
+    with hdr_col:
+        st.markdown('<div class="page-header">Overview</div>',
+                    unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="page-sub">{biz_label} · '
+            f'{pnl["date_range_days"]}-day snapshot</div>',
+            unsafe_allow_html=True,
+        )
+    with ts_col:
+        if st.session_state.last_calculated:
+            st.caption(f"Updated: **{st.session_state.last_calculated}**")
 
-    # ── Main 2/3 + 1/3 layout ─────────────────────
+    # ── Main layout: left (charts) + right (panels) ─
     left_col, right_col = st.columns([2, 1], gap="large")
 
-    # ─── LEFT COLUMN ───────────────────────────────
     with left_col:
-        # ── 3 Hero KPI Cards ──
-        # Revenue
-        rev_color = "green" if pnl["net_profit"] > 0 else "red"
-        rev_badge = "healthy" if pnl["net_profit"] > 0 else "action"
-        rev_label = "Healthy" if pnl["net_profit"] > 0 else "Action needed"
-        st.markdown(f"""
-        <div class="pp-card-hero">
-            <div class="hero-label">💰 Total Revenue</div>
-            <div class="hero-value">${pnl["total_revenue"]:,.0f}</div>
-            <div class="hero-sub">${pnl["daily_avg_revenue"]:,.0f}/day avg · {len(st.session_state.df_sales):,} transactions</div>
-            <span class="pp-badge pp-badge-{rev_badge}">{rev_label}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # ── 3 Hero KPI Cards ────────────────────
+        monthly = pnl.get("monthly", pd.DataFrame())
+        mom_change = 0.0
+        monthly_rev = pnl["total_revenue"]
+        if len(monthly) >= 2 and "revenue" in monthly.columns:
+            last_two = monthly.tail(2)["revenue"].values
+            monthly_rev = last_two[-1]
+            if last_two[-2] > 0:
+                mom_change = (last_two[-1] - last_two[-2]) / last_two[-2] * 100
 
-        # Net Profit
-        if pnl["net_profit"] >= 0:
-            np_color, np_badge, np_label = "green", "healthy", "Profitable"
-        elif pnl["net_margin_pct"] > 0:
-            np_color, np_badge, np_label = "yellow", "warning", "Low margin"
-        else:
-            np_color, np_badge, np_label = "red", "action", "Loss"
-        st.markdown(f"""
-        <div class="pp-card-hero">
-            <div class="hero-label">💎 Net Profit</div>
-            <div class="hero-value {np_color}">${pnl["net_profit"]:,.0f}</div>
-            <div class="hero-sub">{pnl["net_margin_pct"]:.1f}% net margin · {pnl["gross_margin_pct"]:.1f}% gross</div>
-            <span class="pp-badge pp-badge-{np_badge}">{np_label}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        days_until_due = 30
+        next_filing_amount = 0
+        if tax:
+            schedule = tax.get("sales_tax", {}).get("schedule", [])
+            if schedule:
+                import datetime as dt
+                try:
+                    due_str = schedule[0].get("due_window", "")
+                    due_date = dt.datetime.strptime(
+                        due_str.split("-")[0].strip(), "%b %d, %Y").date()
+                    days_until_due = (due_date - dt.date.today()).days
+                except Exception:
+                    pass
+                next_filing_amount = tax.get("sales_tax", {}).get(
+                    "filing_period_sales_tax", 0)
 
-        # Tax / expenses row
-        if tax and complete:
-            tax_rate = tax["sales_tax"].get("tax_rate", 0) * 100
-            tax_period = tax["sales_tax"].get("filing_frequency_label", "period")
-            tax_period_amount = tax["sales_tax"].get("filing_period_sales_tax", 0)
-            tax_sub = f"{tax_period_amount:,.0f}/mo set aside · {tax_rate:.2f}% rate"
-            tax_badge, tax_label = "review", "Set aside"
-        elif tax:
-            tax_sub = "Upgrade to Complete for real estimate"
-            tax_badge, tax_label = "insight", "Preview"
-        else:
-            tax_sub = "Add data to calculate"
-            tax_badge, tax_label = "insight", "Preview"
-        tax_color = "green" if (tax and complete) else "yellow"
-        st.markdown(f"""
-        <div class="pp-card-hero">
-            <div class="hero-label">🏛️ Tax Set-Aside</div>
-            <div class="hero-value {tax_color}">{"${:,.0f}".format(tax["sales_tax"]["filing_period_sales_tax"]) if tax and complete else "—"}</div>
-            <div class="hero-sub">{tax_sub}</div>
-            <span class="pp-badge pp-badge-{tax_badge}">{tax_label}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        margin_improving = False
+        if len(monthly) >= 2 and "gross_margin_pct" in monthly.columns:
+            last_two_m = monthly.tail(2)["gross_margin_pct"].values
+            margin_improving = last_two_m[-1] > last_two_m[-2]
 
-        # ── Revenue Trend Chart ──
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        st.markdown("##### Performance trend")
-        if not pnl["monthly"].empty:
-            monthly = pnl["monthly"]
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            mom_sign = "+" if mom_change >= 0 else ""
+            mom_color = "#34D399" if mom_change >= 0 else "#EF4444"
+            st.markdown(f"""
+            <div class="pp-card-hero">
+                <div class="hero-label">Monthly Revenue</div>
+                <div class="hero-value">${monthly_rev:,.0f}</div>
+                <div class="hero-sub" style="color:{mom_color}">
+                    {mom_sign}{mom_change:.1f}% vs last month
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+        with c2:
+            margin = pnl["net_margin_pct"]
+            m_cls = "green" if margin >= 10 else ("yellow" if margin >= 0 else "red")
+            m_sub = "Margins improving" if margin_improving else "Margins declining"
+            st.markdown(f"""
+            <div class="pp-card-hero">
+                <div class="hero-label">Profit Margin</div>
+                <div class="hero-value {m_cls}">{margin:.1f}%</div>
+                <div class="hero-sub">{m_sub}</div>
+            </div>""", unsafe_allow_html=True)
+
+        with c3:
+            if next_filing_amount > 0:
+                st.markdown(f"""
+            <div class="pp-card-hero">
+                <div class="hero-label">Est. Tax Due</div>
+                <div class="hero-value yellow">${next_filing_amount:,.0f}</div>
+                <div class="hero-sub">Due in {days_until_due} days</div>
+            </div>""", unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+            <div class="pp-card-hero">
+                <div class="hero-label">Est. Tax Due</div>
+                <div class="hero-value">—</div>
+                <div class="hero-sub">Add data to calculate</div>
+            </div>""", unsafe_allow_html=True)
+
+        # ── Revenue Trend Chart ──────────────────
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+        st.markdown("##### Revenue trend")
+        if not monthly.empty and "revenue" in monthly.columns:
+            n_months = len(monthly)
+            period_label = f"Last {n_months} months"
+
             fig = go.Figure()
+            colors = [f"rgba(59,130,246,{0.5 + 0.5 * (i/max(len(monthly)-1,1))})"
+                      for i in range(len(monthly))]
             fig.add_trace(go.Bar(
                 x=monthly["month"],
                 y=monthly["revenue"],
                 name="Revenue",
-                marker_color="#6366f1",
+                marker_color=colors,
                 marker_cornerradius=6,
             ))
             if "net_profit" in monthly.columns:
@@ -2293,180 +2497,50 @@ def page_overview() -> None:
                     x=monthly["month"],
                     y=monthly["net_profit"],
                     name="Net Profit",
-                    line=dict(color="#10b981", width=2.5),
+                    line=dict(color="#34D399", width=2.5),
+                    mode="lines+markers",
+                    marker=dict(size=5),
                 ))
-            fig.update_layout(**CHART_LAYOUT, barmode="group", height=300)
+            layout = dict(**CHART_LAYOUT)
+            layout["height"] = 280
+            layout["annotations"] = [dict(
+                text=period_label,
+                x=1, y=1.08, xref="paper", yref="paper",
+                showarrow=False,
+                font=dict(size=11, color="#64748B"),
+                xanchor="right",
+                bgcolor="rgba(30,41,59,0.8)",
+                borderpad=6,
+                bordercolor="rgba(148,163,184,0.2)",
+                borderwidth=1,
+            )]
+            fig.update_layout(**layout)
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.caption("Load more data to unlock the overview trend chart.")
+            st.caption("Add more data to unlock the revenue trend chart.")
 
-        # ── Continue to Analytics / TaxShield ──
-        c1, c2 = st.columns(2)
-        with c1:
-            if st.button("📊 Open Analytics →", use_container_width=True, key="overview_analytics"):
-                jump_to("Analytics")
-            st.caption(f"{len(st.session_state.df_sales):,} transactions · {pnl['net_margin_pct']:.1f}% margin")
-        with c2:
-            if tax and complete:
-                if st.button("🏛️ Open TaxShield →", use_container_width=True, key="overview_tax"):
-                    jump_to("TaxShield")
-                st.caption(f"{tax['sales_tax']['county']} county · ${tax['net_annual_tax']:,.0f}/yr")
-            elif tax:
-                if st.button("🏛️ Preview TaxShield →", use_container_width=True, key="overview_tax_prev"):
-                    jump_to("TaxShield")
-                st.caption(f"{tax['sales_tax']['filing_frequency_label']} filing")
-            else:
-                st.caption("Add data to calculate tax")
-
-    # ─── RIGHT COLUMN ──────────────────────────────
-    with right_col:
-        # ── Smart Insights Panel ──
-        st.markdown("""
-        <div class="panel-container">
-            <div class="panel-header">
-                <div class="panel-title">🧠 Smart Insights</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        insights = []
-
-        # Net margin insight
-        if pnl["net_margin_pct"] < 5:
-            insights.append((
-                "Action needed",
-                "🔴 Net margin critically low",
-                f"At {pnl['net_margin_pct']:.1f}%, you're keeping very little from each dollar. Immediate action on costs or pricing is needed.",
-                "action",
-            ))
-        elif pnl["net_margin_pct"] < 15:
-            insights.append((
-                "Room to improve",
-                "⚠️ Net margin below target",
-                f"Net margin at {pnl['net_margin_pct']:.1f}% — below the 15%+ healthy range. Review pricing and costs.",
-                "warning",
-            ))
-        else:
-            insights.append((
-                "Healthy",
-                "✅ Strong net margin",
-                f"Net margin of {pnl['net_margin_pct']:.1f}% keeps the business sustainable.",
-                "healthy",
-            ))
-
-        # Gross margin
-        if pnl["gross_margin_pct"] < BENCHMARKS["gross_margin_pct"]:
-            insights.append((
-                "Review",
-                "⚠️ Gross margin below benchmark",
-                f"Gross margin at {pnl['gross_margin_pct']:.1f}%, below the {BENCHMARKS['gross_margin_pct']}% target. Check COGS or pricing.",
-                "warning",
-            ))
-
-        # Overtime
-        if pnl["overtime_count"] > 0:
-            ot_est = pnl["total_labor"] * (pnl["overtime_pct"] / 100) * 0.5
-            insights.append((
-                "Review",
-                "⚠️ Overtime detected",
-                f"{pnl['overtime_count']} overtime shifts adding ~${ot_est:,.0f}/month in extra labor cost.",
-                "review",
-            ))
-
-        # Labor
-        if pnl["labor_pct"] > BENCHMARKS["labor_pct_of_revenue"]:
-            insights.append((
-                "Review",
-                f"⚠️ Labor at {pnl['labor_pct']:.1f}%",
-                f"Labor is {pnl['labor_pct']:.1f}% of revenue — above the {BENCHMARKS['labor_pct_of_revenue']}% target. Review scheduling or staffing.",
-                "review",
-            ))
-
-        # Revenue trend
-        if not pnl["monthly"].empty and len(pnl["monthly"]) >= 2:
-            recent = pnl["monthly"]["revenue"].iloc[-1]
-            prev = pnl["monthly"]["revenue"].iloc[-2]
-            if prev > 0:
-                delta = ((recent - prev) / prev) * 100
-                if delta > 10:
-                    insights.append((
-                        "Positive",
-                        f"📈 Revenue up {delta:.0f}%",
-                        f"Last month revenue was ${recent:,.0f}, up from ${prev:,.0f} the month before.",
-                        "healthy",
-                    ))
-                elif delta < -10:
-                    insights.append((
-                        "Watch",
-                        f"📉 Revenue down {abs(delta):.0f}%",
-                        f"Last month revenue was ${recent:,.0f}, down from ${prev:,.0f}. Investigate the cause.",
-                        "warning",
-                    ))
-
-        # Render up to 3 insights
-        badge_map = {
-            "action": "pp-badge-action",
-            "warning": "pp-badge-warning",
-            "healthy": "pp-badge-healthy",
-            "review": "pp-badge-review",
-            "insight": "pp-badge-insight",
-        }
-        for title, ititle, idesc, btype in insights[:3]:
-            badge_cls = badge_map.get(btype, "pp-badge-insight")
-            st.markdown(f"""
-            <div class="insight-card">
-                <div class="insight-title"><span class="pp-badge {badge_cls}">{title}</span></div>
-                <div class="insight-title" style="margin-top:6px;">{ititle}</div>
-                <div class="insight-desc">{idesc}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # ── TaxShield Deadlines Panel ──
-        if tax and complete:
-            schedule = tax.get("sales_tax", {}).get("schedule", [])
-            if schedule:
-                st.markdown("""
-                <div class="panel-container">
-                    <div class="panel-header">
-                        <div class="panel-title">🏛️ Tax Deadlines</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                for item in schedule[:3]:
-                    due_window = item.get("due_window", "N/A")
-                    period = item.get("period", "")
-                    tax_amt = item.get("estimated_tax", 0)
-                    st.markdown(f"""
-                    <div class="deadline-item">
-                        <div class="deadline-title">{due_window}</div>
-                        <div class="deadline-sub">{period} · Est. ${tax_amt:,.0f}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-        elif tax:
-            # Show next filing deadline preview
-            schedule = tax.get("sales_tax", {}).get("schedule", [])
-            if schedule:
-                item = schedule[0]
-                st.markdown(f"""
-                <div class="panel-container">
-                    <div class="panel-header">
-                        <div class="panel-title">🏛️ Tax Deadlines</div>
-                    </div>
-                    <div class="deadline-item">
-                        <div class="deadline-title">{item.get("due_window", "N/A")}</div>
-                        <div class="deadline-sub">{item.get("period", "")} · Upgrade to Complete for full breakdown</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            if st.button("🔓 Upgrade to Complete — $29/mo", use_container_width=True,
-                         key="overview_upgrade"):
-                import webbrowser
-                webbrowser.open("https://buy.stripe.com/8x200ifuDbdH3qichT87K00")
-        else:
-            if st.button("➕ Add transactions to calculate tax", use_container_width=True,
-                         key="overview_add_data"):
+        # ── Quick actions row ────────────────────
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+        q1, q2 = st.columns(2)
+        with q1:
+            if st.button("➕ Add Transaction",
+                         use_container_width=True, type="primary"):
                 jump_to("Data Input")
+        with q2:
+            if st.button("📊 View Full Analytics",
+                         use_container_width=True):
+                jump_to("Analytics")
+
+    with right_col:
+        # ── Smart Insights Panel ─────────────────
+        render_smart_insights(pnl)
+
+        # ── TaxShield Deadlines Panel ────────────
+        render_tax_deadlines(tax)
+
+        # ── Plan badge ───────────────────────────
+        st.caption(f"Plan: **{current_plan_label()}**")
 
 
 def page_taxshield() -> None:
