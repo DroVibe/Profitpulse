@@ -2306,12 +2306,10 @@ def render_tax_deadlines(tax: dict) -> None:
     """, unsafe_allow_html=True)
         return
 
-    items_html = ""
+    deadline_items = []
     badge_count = 0
     for deadline in schedule[:2]:
         due_str = deadline.get("due_window", "")
-        period = deadline.get("period", "")
-        amount = deadline.get("estimated_tax", 0)
 
         try:
             due_date = dt.datetime.strptime(
@@ -2332,31 +2330,31 @@ def render_tax_deadlines(tax: dict) -> None:
             badge_txt = "Soon"
 
         county = tax.get("sales_tax", {}).get("county", "FL")
-        items_html += f"""
-    <div class="deadline-item">
-        <div style="display:flex; justify-content:space-between;
-        align-items:flex-start;">
-            <div>
-                <div class="deadline-title">Sales tax remittance</div>
-                <div class="deadline-sub">{county} · Due {due_str}</div>
-            </div>
-            <span class="pp-badge {badge_cls}">{badge_txt}</span>
-        </div>
-    </div>"""
+        deadline_items.append(
+            f'<div class="deadline-item">'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            f'<div>'
+            f'<div class="deadline-title">Sales tax remittance</div>'
+            f'<div class="deadline-sub">{county} &middot; Due {due_str}</div>'
+            f'</div>'
+            f'<span class="pp-badge {badge_cls}">{badge_txt}</span>'
+            f'</div>'
+            f'</div>'
+        )
 
     corp_tax = tax.get("corporate_tax", {})
     if corp_tax.get("annual_corporate_tax", 0) > 0:
-        items_html += f"""
-    <div class="deadline-item">
-        <div style="display:flex; justify-content:space-between;
-        align-items:flex-start;">
-            <div>
-                <div class="deadline-title">Quarterly estimate</div>
-                <div class="deadline-sub">Corporate tax · Due Apr 30</div>
-            </div>
-            <span class="pp-badge pp-badge-review">Q2</span>
-        </div>
-    </div>"""
+        deadline_items.append(
+            f'<div class="deadline-item">'
+            f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            f'<div>'
+            f'<div class="deadline-title">Quarterly estimate</div>'
+            f'<div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>'
+            f'</div>'
+            f'<span class="pp-badge pp-badge-review">Q2</span>'
+            f'</div>'
+            f'</div>'
+        )
 
     badge_html = (f'<span class="pp-badge pp-badge-action">'
                   f'{badge_count} due soon</span>'
@@ -2368,7 +2366,7 @@ def render_tax_deadlines(tax: dict) -> None:
             <span class="panel-title">TaxShield deadlines</span>
             {badge_html}
         </div>
-        {items_html}
+        {"".join(deadline_items)}
     </div>
     """, unsafe_allow_html=True)
 
@@ -2486,7 +2484,7 @@ def page_overview() -> None:
             colors = [f"rgba(59,130,246,{0.5 + 0.5 * (i/max(len(monthly)-1,1))})"
                       for i in range(len(monthly))]
             fig.add_trace(go.Bar(
-                x=monthly["month"],
+                x=monthly["month"].astype(str),
                 y=monthly["revenue"],
                 name="Revenue",
                 marker_color=colors,
@@ -2494,7 +2492,7 @@ def page_overview() -> None:
             ))
             if "net_profit" in monthly.columns:
                 fig.add_trace(go.Scatter(
-                    x=monthly["month"],
+                    x=monthly["month"].astype(str),
                     y=monthly["net_profit"],
                     name="Net Profit",
                     line=dict(color="#34D399", width=2.5),
