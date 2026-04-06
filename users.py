@@ -337,8 +337,6 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
     """Save user's data to the shared Supabase table (user_sales, etc.).
     Uses DELETE + INSERT with username column to isolate per-user rows.
     Returns True on success."""
-    # TEMP DEBUG
-    st.warning(f"SAVE DEBUG: username={username!r}, data_type={data_type!r}, rows={len(df) if df is not None else 'None'}")
     sb = _get_supabase()
     table_map = {
         "sales": "user_sales", "purchases": "user_purchases",
@@ -355,22 +353,16 @@ def save_user_data(username: str, data_type: str, df: pd.DataFrame) -> bool:
             records.append(r)
 
     if sb is not None:
-        # FIX: use the shared table name from table_map, NOT _data_table_name()
         tname = table_map[data_type]
-        st.warning(f"SAVE DEBUG: table={tname}, username={username!r}, records={len(records)}")
         try:
             # Delete then insert — all-or-nothing semantics
             sb.table(tname).delete().eq("username", username).execute()
-            st.info("SAVE DEBUG: DELETE succeeded")
         except Exception as e:
-            st.error(f"SAVE DEBUG: DELETE FAILED: {e}")
             return False  # Delete failed — abort rather than lose data
         if records:
             try:
                 sb.table(tname).insert(records).execute()
-                st.info("SAVE DEBUG: INSERT succeeded")
             except Exception as e:
-                st.error(f"SAVE DEBUG: INSERT FAILED: {e}")
                 return False  # Insert failed — data not saved
         return True
 
