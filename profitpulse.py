@@ -2427,10 +2427,10 @@ def page_overview() -> None:
                 next_filing_amount = tax.get("sales_tax", {}).get(
                     "filing_period_sales_tax", 0)
 
-        margin_improving = False
+        margin_improving = None  # None = not enough data
         if len(monthly) >= 2 and "gross_margin_pct" in monthly.columns:
             last_two_m = monthly.tail(2)["gross_margin_pct"].values
-            margin_improving = last_two_m[-1] > last_two_m[-2]
+            margin_improving = bool(last_two_m[-1] > last_two_m[-2])
 
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -2448,7 +2448,12 @@ def page_overview() -> None:
         with c2:
             margin = pnl["net_margin_pct"]
             m_cls = "green" if margin >= 10 else ("yellow" if margin >= 0 else "red")
-            m_sub = "Margins improving" if margin_improving else "Margins declining"
+            if margin_improving is None:
+                m_sub = f"Net margin {pnl['net_margin_pct']:.1f}%"
+            elif margin_improving:
+                m_sub = "Margins improving"
+            else:
+                m_sub = "Margins declining"
             st.markdown(f"""
             <div class="pp-card-hero">
                 <div class="hero-label">Profit Margin</div>
@@ -2525,10 +2530,12 @@ def page_overview() -> None:
             if st.button("➕ Add Transaction",
                          use_container_width=True, type="primary"):
                 jump_to("Data Input")
+                st.rerun()
         with q2:
             if st.button("📊 View Full Analytics",
                          use_container_width=True):
                 jump_to("Analytics")
+                st.rerun()
 
     with right_col:
         # ── Smart Insights Panel ─────────────────
@@ -2579,9 +2586,16 @@ def page_taxshield() -> None:
 
         st.markdown("##### Included with ProfitPulse Complete")
         if is_free:
-            st.write("Free accounts can preview TaxShield estimates. Subscribe to Starter ($19/mo) or Complete ($29/mo) to unlock the full tool.")
+            st.markdown(
+                "Free accounts can preview TaxShield estimates. "
+                "Subscribe to Starter (\\$19/mo) or Complete (\\$29/mo) "
+                "to unlock the full tool."
+            )
         else:
-            st.write("Starter accounts can preview TaxShield. Upgrade to Complete ($29/mo) for the full tool.")
+            st.markdown(
+                "Starter accounts can preview TaxShield. "
+                "Upgrade to Complete (\\$29/mo) for the full tool."
+            )
         p1, p2, p3 = st.columns(3)
         with p1:
             st.metric("County-aware estimate", "Included")
@@ -2702,15 +2716,6 @@ def page_billing() -> None:
         st.write("- TaxShield estimates and filing cadence")
         st.write("- County-aware Florida tax context")
         st.write("- Stronger operational planning visibility")
-
-    st.markdown("##### Upgrade framing")
-    u1, u2, u3 = st.columns(3)
-    with u1:
-        st.metric("Starter", "Analytics", "Core visibility")
-    with u2:
-        st.metric("Complete", "Analytics + TaxShield", "Planning clarity")
-    with u3:
-        st.metric("White-glove", "Separate service", "On-premises setup")
 
     st.markdown("##### Current plan")
     st.info(f"You are currently on **{current_plan_label()}**.")
