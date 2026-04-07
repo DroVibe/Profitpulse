@@ -332,6 +332,49 @@ st.markdown("""
   #MainMenu { visibility: hidden; }
   footer     { visibility: hidden; }
   header[data-testid="stHeader"] { background: transparent; }
+
+/* Sidebar navigation buttons */
+.nav-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+.nav-btn:hover {
+  background: rgba(99,102,241,0.12);
+  color: #E2E8F0;
+}
+.nav-btn.active {
+  background: rgba(59,130,246,0.18);
+  color: #F1F5F9;
+  font-weight: 600;
+}
+.nav-divider {
+  border: none;
+  border-top: 1px solid rgba(148,163,184,0.08);
+  margin: 12px 0;
+}
+.sidebar-logo {
+  text-align: center;
+  padding: 1.2rem 0 0.75rem;
+}
+.sidebar-user {
+  font-size: 12px;
+  color: #64748B;
+  text-align: center;
+  padding-bottom: 0.75rem;
+}
+
 </style>
 
 <style>
@@ -3068,117 +3111,136 @@ def page_export() -> None:
 # SIDEBAR (extracted from main for clarity)
 # ────────────────────────────────────────────────
 def render_sidebar() -> str:
-    """Render sidebar nav + AI Pulse. Returns selected page name."""
+    """Render sidebar navigation. Returns selected page name."""
     with st.sidebar:
+        # ── Logo + user info ─────────────────────
         st.markdown("""
-        <div style="text-align:center; padding:1rem 0 0.5rem;">
-            <span style="font-size:1.6rem; color:#e0e0e0;">◈</span>
-            <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
-                ProfitPulse
-            </p>
+        <div class="sidebar-logo">
+        <span style="font-size:1.8rem; color:#e0e0e0;">◈</span>
+        <p style="font-size:1.1rem; font-weight:700;
+        color:#F1F5F9; margin:0.3rem 0 0;">
+        ProfitPulse
+        </p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.caption(f"Signed in as **{st.session_state.username}**")
-        if st.session_state.business_type:
-            st.caption(f"Business: **{st.session_state.business_type}**")
-        st.caption(f"Plan: **{current_plan_label()}**")
-
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-        nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
-
-        # AI Advisor is only for Starter/Complete/Demo users
-        if st.session_state.user_tier not in {"starter", "complete", "demo"}:
-            nav_options.remove("AI Advisor")
-
-        # Honor pending nav from jump_to() FIRST — before selectbox runs.
-        # This must come before the selectbox so nav_page is set correctly.
-        pending = st.session_state.pop("_pending_nav", None)
-        if pending and pending in nav_options:
-            st.session_state.nav_page = pending
-        
-        default_page = st.session_state.get("nav_page", "Overview")
-        if default_page not in nav_options:
-            default_page = "Overview"
-
-        # Build format func dict once
-        nav_labels = {
-            "Overview":   "🏠  Overview",
-            "Analytics":  "📊  Analytics",
-            "TaxShield":  "🧾  TaxShield",
-            "Data Input": "📁  Data Input",
-            "AI Advisor": "🤖  AI Advisor",
-            "Billing":    "◈  Billing",
-            "Settings":   "⚙️  Settings",
-            "Export":     "📤  Export",
-        }
-        
-        # Use a selectbox instead of radio for more reliable state handling
-        page = st.selectbox(
-            "Navigation",
-            nav_options,
-            index=nav_options.index(default_page),
-            format_func=lambda x: nav_labels.get(x, x),
-            key="nav_select",
-            label_visibility="collapsed"
+        username = st.session_state.get("username", "")
+        plan = current_plan_label()
+        st.markdown(
+            f'<div class="sidebar-user">'
+            f'{username} &middot; {plan}'
+            f'</div>',
+            unsafe_allow_html=True
         )
-        
-        # Sync nav_page — ONLY if the user actually changed the selectbox.
-        # Prevents pending nav from being stomped if user also clicks a selectbox option.
-        if page != st.session_state.get("nav_page", ""):
-            st.session_state.nav_page = page
-        # ── AI Pulse ────────────────────────────
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        with st.expander("🤖 AI Pulse", expanded=True):
-            st.caption("Dynamic insight based on your current numbers")
-            if st.button("Generate Insight", use_container_width=True):
+
+        if st.session_state.business_type:
+            st.markdown(
+                f'<div style="text-align:center; font-size:11px; '
+                f'color:#475569; padding-bottom:0.75rem;">'
+                f'{st.session_state.business_type}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── Navigation ───────────────────────────
+        pending = st.session_state.pop("_pending_nav", None)
+        if pending:
+            st.session_state.nav_page = pending
+
+        current_page = st.session_state.get("nav_page", "Overview")
+
+        nav_items = [
+            ("Overview",   "🏠", True),
+            ("Analytics",  "📊", True),
+            ("TaxShield",  "🧾", True),
+            ("Data Input", "📁", True),
+            ("AI Advisor", "🤖",
+             st.session_state.user_tier in {"starter","complete","demo"}),
+        ]
+
+        for page, icon, visible in nav_items:
+            if not visible:
+                continue
+            is_active = current_page == page
+            if st.button(
+                    f"{icon} {page}",
+                    key=f"nav_{page}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+            ):
+                st.session_state.nav_page = page
+                if "nav_select" in st.session_state:
+                    del st.session_state["nav_select"]
+                st.rerun()
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── Secondary nav ────────────────────────
+        secondary_items = [
+            ("Billing",  "💳"),
+            ("Settings", "⚙️"),
+            ("Export",   "📤"),
+        ]
+        for page, icon in secondary_items:
+            if st.button(
+                    f"{icon} {page}",
+                    key=f"nav_{page}",
+                    use_container_width=True,
+            ):
+                st.session_state.nav_page = page
+                st.rerun()
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── AI Pulse (collapsed by default) ─────
+        with st.expander("🤖 AI Pulse", expanded=False):
+            st.caption("Dynamic insight from your numbers")
+            if st.button("Generate Insight",
+                         use_container_width=True,
+                         key="sidebar_ai_pulse"):
                 if st.session_state.df_sales.empty:
-                    st.warning("Load data first so the AI can give meaningful advice.")
+                    st.warning("Load data first.")
                 else:
                     if not st.session_state.pnl_cache:
                         calculate_pnl()
                     with st.spinner("Analysing…"):
                         insight = call_ai(_ai_pulse_prompt())
                     st.markdown(insight)
-            # Static fallback tip when no AI call made yet
             if not st.session_state.pnl_cache:
-                st.info("💡 **Tip:** Track every expense category separately — "
-                        "vague 'Misc' entries hide your biggest cost leaks.")
-
-        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+                st.info("💡 Track every expense category "
+                        "separately — vague 'Misc' entries "
+                        "hide your biggest cost leaks.")
 
         # ── Data status ──────────────────────────
-        has_data = not st.session_state.df_sales.empty
-        if has_data:
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+        if not st.session_state.df_sales.empty:
             total_rows = sum(
                 len(st.session_state[k])
-                for k in ["df_sales", "df_purchases", "df_expenses", "df_labor"]
+                for k in ["df_sales","df_purchases",
+                          "df_expenses","df_labor"]
             )
             st.caption(f"✓ {total_rows:,} records loaded")
             if st.session_state.last_calculated:
-                st.caption(f"P&L last run: {st.session_state.last_calculated}")
+                st.caption(
+                    f"P&L: {st.session_state.last_calculated}")
         else:
             st.caption("No data loaded")
 
-        if st.button("🚪 Sign out", use_container_width=True):
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+
+        # ── Sign out ─────────────────────────────
+        if st.button("🚪 Sign out", use_container_width=True,
+                     key="sidebar_signout"):
             logout()
 
         st.markdown("---")
-    return page
 
+        return st.session_state.get("nav_page", "Overview")
 
-# ────────────────────────────────────────────────
-# MAIN ROUTER
-# ────────────────────────────────────────────────
-def main() -> None:
-    # Global error handler
-    try:
-        _main_impl()
-    except Exception as e:
-        st.error(f"⚠️ An error occurred: {str(e)}")
-        st.info("Try refreshing the page. If the problem persists, your session may have expired.")
-        st.button("↻ Reload", on_click=lambda: st.rerun())
 
 def _main_impl() -> None:
     # Apply theme early
