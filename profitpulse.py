@@ -2289,27 +2289,20 @@ def render_smart_insights(pnl: dict) -> None:
 
 
 def render_tax_deadlines(tax: dict) -> None:
-    """Render TaxShield Deadlines panel using st components."""
+    """Render TaxShield Deadlines panel."""
     import datetime as dt
     today = dt.date.today()
 
-    st.markdown("""
-    <div class="panel-container">
-    <div class="panel-header">
-    <span class="panel-title">TaxShield deadlines</span>
-    </div>
-    """, unsafe_allow_html=True)
-
     schedule = tax.get("sales_tax", {}).get("schedule", []) if tax else []
+    county = tax.get("sales_tax", {}).get("county", "FL") if tax else "FL"
+    corp_tax = tax.get("corporate_tax", {}) if tax else {}
+
+    # Build all inner HTML first
+    inner_html = ""
 
     if not schedule:
-        st.markdown(
-            '<div class="insight-desc">Add revenue data to '
-            'calculate filing deadlines.</div>',
-            unsafe_allow_html=True
-        )
+        inner_html = '<div class="insight-desc">Add revenue data to calculate filing deadlines.</div>'
     else:
-        county = tax.get("sales_tax", {}).get("county", "FL")
         for deadline in schedule[:2]:
             due_str = deadline.get("due_window", "")
             try:
@@ -2327,35 +2320,41 @@ def render_tax_deadlines(tax: dict) -> None:
                 badge_cls = "pp-badge-insight"
                 badge_txt = "Soon"
 
-            st.markdown(f"""
-            <div class="deadline-item">
-            <div style="display:flex;justify-content:space-between;
-            align-items:flex-start;">
-            <div>
-            <div class="deadline-title">Sales tax remittance</div>
-            <div class="deadline-sub">{county} &middot; Due {due_str}</div>
-            </div>
-            <span class="pp-badge {badge_cls}">{badge_txt}</span>
-            </div>
-            </div>
-            """, unsafe_allow_html=True)
+            inner_html += (
+                f'<div class="deadline-item">'
+                f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                f'<div>'
+                f'<div class="deadline-title">Sales tax remittance</div>'
+                f'<div class="deadline-sub">{county} &middot; Due {due_str}</div>'
+                f'</div>'
+                f'<span class="pp-badge {badge_cls}">{badge_txt}</span>'
+                f'</div>'
+                f'</div>'
+            )
 
-        corp_tax = tax.get("corporate_tax", {})
         if corp_tax.get("annual_corporate_tax", 0) > 0:
-            st.markdown("""
-            <div class="deadline-item">
-            <div style="display:flex;justify-content:space-between;
-            align-items:flex-start;">
-            <div>
-            <div class="deadline-title">Quarterly estimate</div>
-            <div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>
-            </div>
-            <span class="pp-badge pp-badge-review">Q2</span>
-            </div>
-            </div>
-            """, unsafe_allow_html=True)
+            inner_html += (
+                '<div class="deadline-item">'
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                '<div>'
+                '<div class="deadline-title">Quarterly estimate</div>'
+                '<div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>'
+                '</div>'
+                '<span class="pp-badge pp-badge-review">Q2</span>'
+                '</div>'
+                '</div>'
+            )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Render everything in ONE st.markdown() call
+    st.markdown(
+        f'<div class="panel-container">'
+        f'<div class="panel-header">'
+        f'<span class="panel-title">TaxShield deadlines</span>'
+        f'</div>'
+        f'{inner_html}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 
 def page_overview() -> None:
