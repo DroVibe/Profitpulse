@@ -854,11 +854,12 @@ def login_page() -> None:
                     else:
                         st.error("Invalid credentials.")
 
-            st.markdown(
-                "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
-                "Demo: admin@pilot.com / pilot2026</p>",
-                unsafe_allow_html=True,
-            )
+            if os.getenv("SHOW_DEMO_CREDS", "").lower() == "true":
+                st.markdown(
+                    "<p style='text-align:center;font-size:0.78rem;color:#cbd5e1;margin-top:1rem;'>"
+                    "Demo: admin@pilot.com / pilot2026</p>",
+                    unsafe_allow_html=True,
+                )
         
         with tab_signup:
             with st.form("signup_form", clear_on_submit=False):
@@ -2793,6 +2794,7 @@ def page_billing() -> None:
 
 
 def page_settings() -> None:
+    import users
     st.markdown('<div class="page-header">Settings</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="page-sub">Update the business profile and defaults that power your dashboard</div>',
@@ -3170,7 +3172,7 @@ def render_sidebar() -> str:
             ("TaxShield",  "🧾", True),
             ("Data Input", "📁", True),
             ("AI Advisor", "🤖",
-             st.session_state.user_tier in {"starter","complete","demo"}),
+             st.session_state.user_tier in {"starter","complete","demo","beta"}),
         ]
 
         for page, icon, visible in nav_items:
@@ -3308,6 +3310,14 @@ def _main_impl() -> None:
         page_billing()
     elif page == "Settings":
         page_settings()
+
+
+def main() -> None:
+    try:
+        _main_impl()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        st.button("↻ Reload", on_click=lambda: st.rerun())
 
 
 if __name__ == "__main__":
