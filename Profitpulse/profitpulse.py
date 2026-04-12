@@ -2038,17 +2038,28 @@ def page_dashboard() -> None:
 
     # ── AI Period Summary Button ─────────────────
     if st.button("🤖 AI Period Summary", type="secondary", use_container_width=True):
+        benchmarks = {
+            "gross_margin": BENCHMARKS["gross_margin_pct"],
+            "net_margin":   BENCHMARKS["net_margin_pct"],
+        }
+        prompt = (
+            "You are a business analyst. Based on this P&L data: "
+            "Revenue ${:.2f}, OpEx ${:.2f}, Gross Profit ${:.2f}, Net Margin {:.1f}%. "
+            "Industry benchmarks: Gross Margin {:.0f}%, Net Margin {:.0f}%, "
+            "Labor % of Revenue: {:.1f}%. "
+            "Write a 3-4 sentence plain-English summary: "
+            "what's going well, what's concerning, and 1-2 specific suggestions."
+        ).format(
+            pnl["total_revenue"], pnl["total_opex"], pnl["gross_profit"],
+            pnl["net_margin_pct"],
+            benchmarks["gross_margin"], benchmarks["net_margin"],
+            pnl["labor_pct_of_revenue"],
+        )
         with st.spinner("Analyzing your period..."):
-            benchmarks = calc_benchmarks(pnl)
-            prompt = f"""You are a business analyst. Based on this P&L data: Revenue ${pnl['total_revenue']:.2f}, 
-            OpEx ${pnl['total_opex']:.2f}, Gross Profit ${pnl['gross_profit']:.2f}, Net Margin {pnl['net_margin_pct']:.1f}%.
-            Industry benchmarks: Gross Margin {benchmarks['gross_margin']:.0f}%, Net Margin {benchmarks['net_margin']:.0f}%.
-            Labor % of Revenue: {pnl['labor_pct_of_revenue']:.1f}%.
-            Write a 3-4 sentence plain-English summary: what's going well, what's concerning, and 1-2 specific suggestions."""
             response = call_ai(prompt)
-            st.markdown("### 📋 AI Period Summary")
-            st.markdown(response)
-            st.caption("AI summaries are informational. Not financial advice.")
+        st.markdown("### 📋 AI Period Summary")
+        st.markdown(response)
+        st.caption("AI summaries are informational. Not financial advice.")
 
 
     # ── Natural Language Summary ─────────────────
