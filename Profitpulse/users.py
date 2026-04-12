@@ -69,6 +69,7 @@ def _init_sqlite():
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def create_user(username: str, email: str, password: str):
+    email = email.lower().strip()
     """
     Create account in two steps:
       A. Insert into Supabase Auth (email + password)
@@ -144,6 +145,7 @@ def create_user(username: str, email: str, password: str):
 
 
 def verify_user(email: str, password: str):
+    email = email.lower().strip()
     """
     Verify credentials via Supabase Auth, then look up username + tier
     from public.users (filtered by email).

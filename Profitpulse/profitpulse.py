@@ -332,6 +332,49 @@ st.markdown("""
   #MainMenu { visibility: hidden; }
   footer     { visibility: hidden; }
   header[data-testid="stHeader"] { background: transparent; }
+
+/* Sidebar navigation buttons */
+.nav-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+.nav-btn:hover {
+  background: rgba(99,102,241,0.12);
+  color: #E2E8F0;
+}
+.nav-btn.active {
+  background: rgba(59,130,246,0.18);
+  color: #F1F5F9;
+  font-weight: 600;
+}
+.nav-divider {
+  border: none;
+  border-top: 1px solid rgba(148,163,184,0.08);
+  margin: 12px 0;
+}
+.sidebar-logo {
+  text-align: center;
+  padding: 1.2rem 0 0.75rem;
+}
+.sidebar-user {
+  font-size: 12px;
+  color: #64748B;
+  text-align: center;
+  padding-bottom: 0.75rem;
+}
+
 </style>
 
 <style>
@@ -774,6 +817,7 @@ def login_page() -> None:
 
             # Handle AFTER form block — safe from Streamlit form rerun issues
             if submitted:
+                user = user.lower().strip()
                 # First check demo credentials
                 valid_user = os.getenv("APP_USER", DEMO_USER)
                 valid_pass = os.getenv("APP_PASS", DEMO_PASS)
@@ -1506,140 +1550,42 @@ def page_data_input() -> None:
     _ensure_dfs()
     st.markdown('<div class="page-header">Data Input</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="page-sub">Upload CSVs, add transactions manually, or load demo data</div>',
+        '<div class="page-sub">Snap a receipt, upload a CSV, '
+        'or enter transactions manually</div>',
         unsafe_allow_html=True,
     )
 
-    # ── First-Time Data Guide ───────────────────
-    has_data = (
-        not st.session_state.df_sales.empty
-        or not st.session_state.df_purchases.empty
-        or not st.session_state.df_expenses.empty
-    )
-    if not has_data:
-        st.markdown("""
-        <div style="
-            background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(99,102,241,0.08) 100%);
-            border: 1px solid rgba(59,130,246,0.25);
-            border-radius: 16px;
-            padding: 20px 24px;
-            margin-bottom: 1.5rem;
-        ">
-            <div style="font-weight:700; font-size:15px; margin-bottom:10px; color:#93C5FD;">
-                📋 Getting Started — What to Upload
-            </div>
-            <p style="color:#CBD5E1; font-size:13px; margin-bottom:10px;">
-                ProfitPulse needs <strong>at minimum your sales data</strong> to show your P&L.
-                Everything else is optional but makes the picture more complete.
-            </p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px;">
-                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                    <strong style="color:#86EFAC;">✅ Sales (required)</strong><br>
-                    <span style="color:#94A3B8;">date, category, amount, description</span>
-                </div>
-                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                    <strong style="color:#FDE68A;">⚠️ Purchases / COGS</strong><br>
-                    <span style="color:#94A3B8;">date, category, amount, description</span>
-                </div>
-                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                    <strong style="color:#93C5FD;">💡 Expenses</strong><br>
-                    <span style="color:#94A3B8;">date, category, amount, description</span>
-                </div>
-                <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
-                    <strong style="color:#F9A8D4;">👷 Labor</strong><br>
-                    <span style="color:#94A3B8;">date, employee, hours, rate</span>
-                </div>
-            </div>
-            <p style="color:#64748B; font-size:12px; margin-top:10px; margin-bottom:0;">
-                Upload CSV files below, or use the <strong style="color:#CBD5E1;">demo data</strong> button to explore first.
-                Manual entry tabs are below the CSV uploaders.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    biz = st.session_state.business_type or "Auto Repair"
-
-    # ── Upgrade nudge for free users ───────────────────────────────
-    if st.session_state.user_tier in {"free"}:
+    # ── Upgrade nudge for free users (below header, above tabs) ──
+    if st.session_state.user_tier == "free":
         st.info(
-            "💡 **You're on the Free plan.** "
-            "Starter ($19/mo) unlocks AI Advisor, export, and full analytics. "
-            "Complete ($29/mo) adds TaxShield."
+            "💡 Free plan. Starter ($19/mo) unlocks AI Advisor "
+            "and full analytics. Complete ($29/mo) adds TaxShield."
         )
-        c1, c2 = st.columns(2)
-        with c1:
-            st.link_button("Start Starter — $19/mo", "https://buy.stripe.com/9B6fZgaaja9Dd0S95H87K01",
-                          use_container_width=True)
-        with c2:
-            st.link_button("Get Complete — $29/mo", "https://buy.stripe.com/8x200ifuDbdH3qichT87K00",
-                          use_container_width=True)
-        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
-    if st.session_state.business_type:
-        st.caption(f"Configured for: **{biz}**")
 
-    col_demo, _ = st.columns([1, 2])
-    with col_demo:
-        if st.button(
-            f"⚡ Reload {biz} Demo (6 months)", use_container_width=True, type="primary",
-            help="Replace all current data with fresh demo data for your business type.",
-        ):
-            with st.spinner("Generating demo data…"):
-                demo = generate_demo_data(6, biz)
-                st.session_state.df_sales     = demo["sales"]
-                st.session_state.df_purchases = demo["purchases"]
-                st.session_state.df_expenses  = demo["expenses"]
-                st.session_state.df_labor     = demo["labor"]
-                save_all_user_data()
-            st.toast("Demo data loaded!", icon="✅")
-            st.rerun()
+    # ── Row counts (always visible at top) ──────────────────────
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Sales", f"{len(st.session_state.df_sales):,}")
+    m2.metric("Purchases", f"{len(st.session_state.df_purchases):,}")
+    m3.metric("Expenses", f"{len(st.session_state.df_expenses):,}")
+    m4.metric("Labor", f"{len(st.session_state.df_labor):,}")
 
-    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
-    # ── CSV Uploaders ───────────────────────────
-    st.markdown("##### Upload CSVs")
-    with st.expander("📖 CSV format guide — what each file needs", expanded=not has_data):
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("**Sales · Purchases · Expenses**")
-            st.code("date,category,amount,description\n2026-01-15,Oil Change,150.00,Regular maintenance\n2026-01-20,Inspection,50.00,State inspection", language="text")
-            st.caption("Tip: category is your own label — e.g. 'Oil Change', 'Rent', 'Marketing'")
-        with c2:
-            st.markdown("**Labor / Payroll**")
-            st.code("date,employee,hours,rate,description\n2026-01-15,Mike,8,25.00,Regular shift\n2026-01-18,Mike,10,37.50,OT shift", language="text")
-            st.caption("Tip: hours × rate = labor cost. OT is auto-detected.")
-    upload_specs = [
-        ("up_sales",  "df_sales",    ["date","category","amount"], "Sales"),
-        ("up_purch",  "df_purchases",["date","category","amount"], "Purchases"),
-        ("up_exp",    "df_expenses", ["date","category","amount"], "Expenses"),
-        ("up_labor",  "df_labor",    ["date","employee","hours","rate"], "Labor"),
-    ]
-    cols = st.columns(4)
-    for col, (key, state_key, required_cols, label) in zip(cols, upload_specs):
-        with col:
-            f = st.file_uploader(label, type="csv", key=key)
-            if f:
-                parsed = parse_csv(f, required_cols, label)
-                if not parsed.empty:
-                    st.session_state[state_key] = parsed
-                    saved_ok = save_all_user_data()
-                    _compute_pnl.clear()
-                    calculate_pnl()
-                    if saved_ok:
-                        st.toast(f"{label}: {len(parsed):,} rows loaded", icon="📂")
-                    else:
-                        st.warning(
-                            f"⚠️ {label} loaded but failed to persist. Will show in this session."
-                        )
+    # ── 3 primary tabs ───────────────────────────────────────────
+    tab_scan, tab_csv, tab_manual = st.tabs([
+        "📷 Snap & Save",
+        "📁 Upload CSV",
+        "✏️ Manual Entry",
+    ])
 
-    st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+    # ════════════════════════════════════════════════════════════
+    # TAB 1 — SNAP & SAVE
+    # ════════════════════════════════════════════════════════════
+    with tab_scan:
+        st.markdown("##### Scan a receipt and save it as an expense")
+        st.caption("Works best with clear, well-lit photos. "
+                   "Take a photo or upload from your camera roll.")
 
-    # ── Snap & Save Receipt Scanner ─────────────────
-    st.markdown("##### 📷 Snap & Save")
-    st.caption("Upload a receipt photo and we'll pre-fill the expense form for you.")
-
-    with st.expander("📷 Snap & Save — Scan a Receipt", expanded=False):
-
-        # Input method toggle
         input_method = st.radio(
             "How would you like to add your receipt?",
             ["📁 Upload a photo", "📷 Take a photo now"],
@@ -1648,7 +1594,6 @@ def page_data_input() -> None:
         )
 
         uploaded_file = None
-
         if input_method == "📁 Upload a photo":
             uploaded_file = st.file_uploader(
                 "Upload receipt image",
@@ -1665,125 +1610,115 @@ def page_data_input() -> None:
                 uploaded_file = camera_photo
 
         if uploaded_file is not None:
-            # Show preview
             try:
                 processed = _preprocess_image(uploaded_file.getvalue())
-                st.image(io.BytesIO(processed), caption="Receipt preview", use_container_width=True)
+                st.image(io.BytesIO(processed),
+                         caption="Receipt preview",
+                         use_container_width=True)
             except Exception:
-                st.image(uploaded_file, caption="Receipt preview", use_container_width=True)
+                st.image(uploaded_file, caption="Receipt preview",
+                         use_container_width=True)
 
-            _s = st.session_state
+        _s = st.session_state
+        d_vendor = _s.get("_r_vendor", "")
+        d_amount = _s.get("_r_amount", 0.0)
+        d_cat = _s.get("_r_category", EXPENSE_CATEGORIES[0])
+        d_desc = _s.get("_r_desc", "")
+        d_date = _s.get("_r_date", str(datetime.date.today()))
+        d_conf = _s.get("_r_confidence", {})
+        scan_ready = bool(d_vendor)
 
-            # Read scan cache for autofill
-            d_vendor = _s.get("_r_vendor", "")
-            d_amount = _s.get("_r_amount", 0.0)
-            d_cat = _s.get("_r_category", EXPENSE_CATEGORIES[0])
-            d_desc = _s.get("_r_desc", "")
-            d_date = _s.get("_r_date", str(datetime.date.today()))
-            d_conf = _s.get("_r_confidence", {})
-            scan_ready = bool(d_vendor)
+        try:
+            d_date_val = datetime.date.fromisoformat(d_date[:10])
+        except Exception:
+            d_date_val = datetime.date.today()
+        cat_idx = (EXPENSE_CATEGORIES.index(d_cat)
+                   if d_cat in EXPENSE_CATEGORIES else 0)
 
-            try:
-                d_date_val = datetime.date.fromisoformat(d_date[:10])
-            except Exception:
-                d_date_val = datetime.date.today()
-            cat_idx = EXPENSE_CATEGORIES.index(d_cat) if d_cat in EXPENSE_CATEGORIES else 0
+        if scan_ready:
+            st.markdown("**✅ Receipt scanned — review and confirm:**")
+            conf_cols = st.columns(4)
+            fields = [
+                ("Vendor", d_vendor, d_conf.get("vendor", "high")),
+                ("Amount", f"${float(d_amount):,.2f}",
+                 d_conf.get("amount", "high")),
+                ("Date", d_date, d_conf.get("date", "medium")),
+                ("Category", d_cat, d_conf.get("category", "medium")),
+            ]
+            icons = {"high": "✅", "medium": "⚠️", "low": "❓"}
+            for col, (label, value, conf) in zip(conf_cols, fields):
+                with col:
+                    st.caption(f"{icons.get(conf, '⚠️')} {label}")
+                    st.markdown(f"**{value}**")
+            st.markdown("---")
+        else:
+            st.info("👆 Tap Scan Receipt to auto-fill the "
+                    "form below.")
 
-            # Show confidence indicators if scan was done
+        r1, r2 = st.columns(2)
+        with r1:
+            vendor_key = f"rec_vendor_f_{d_vendor}"
+            rec_vendor = st.text_input(
+                "Vendor / Store", value=d_vendor,
+                placeholder="e.g., Home Depot, Sysco",
+                key=vendor_key)
+        with r2:
+            date_key = f"rec_date_f_{d_date}"
+            rec_date = st.date_input("Date", value=d_date_val,
+                                    key=date_key)
+
+        r3, r4 = st.columns(2)
+        with r3:
+            amount_key = f"rec_amount_f_{d_vendor}_{d_amount}"
+            rec_amount = st.number_input(
+                "Total Amount ($)", min_value=0.0, step=0.01,
+                value=float(d_amount) if d_amount else 0.0,
+                key=amount_key)
+        with r4:
+            category_key = f"rec_category_f_{d_cat}"
+            rec_category = st.selectbox(
+                "Category", EXPENSE_CATEGORIES,
+                index=cat_idx, key=category_key)
+
+        desc_key = f"rec_desc_f_{d_vendor}"
+        rec_desc = st.text_input(
+            "Description (optional)", value=d_desc,
+            placeholder="What was this for?",
+            key=desc_key)
+
+        btn1, btn2, btn3 = st.columns([2, 1, 1])
+        with btn1:
+            save_clicked = st.button(
+                "💾 Confirm & Save to Expenses",
+                type="primary", use_container_width=True,
+                key="receipt_save_btn")
+        with btn2:
+            scan_clicked = st.button(
+                "🔍 Scan Receipt" + (" ✓" if scan_ready else ""),
+                use_container_width=True,
+                key="receipt_scan_btn")
+        with btn3:
             if scan_ready:
-                st.markdown("**✅ Receipt scanned — review and confirm:**")
-                conf_cols = st.columns(4)
-                fields = [
-                    ("Vendor", d_vendor, d_conf.get("vendor", "high")),
-                    ("Amount", f"${d_amount:,.2f}", d_conf.get("amount", "high")),
-                    ("Date", d_date, d_conf.get("date", "medium")),
-                    ("Category", d_cat, d_conf.get("category", "medium")),
-                ]
-                icons = {"high": "✅", "medium": "⚠️", "low": "❓"}
-                for col, (label, value, conf) in zip(conf_cols, fields):
-                    with col:
-                        icon = icons.get(conf, "⚠️")
-                        st.caption(f"{icon} {label}")
-                        st.markdown(f"**{value}**")
-                st.markdown("---")
+                if st.button("🔄 Clear", use_container_width=True,
+                             key="receipt_clear_btn"):
+                    for k in ("_r_vendor","_r_amount","_r_category",
+                              "_r_desc","_r_date","_r_confidence"):
+                        _s.pop(k, None)
+                    st.rerun()
+
+        if scan_clicked:
+            if uploaded_file is None:
+                st.warning("Please upload or capture a receipt first.")
             else:
-                st.info("👆 Tap Scan Receipt to auto-fill the form below.")
-
-            # Form fields (dynamic keys so widgets reset when scan data updates)
-            r1, r2 = st.columns(2)
-            with r1:
-                vendor_key = f"rec_vendor_f_{d_vendor}"
-                rec_vendor = st.text_input(
-                    "Vendor / Store",
-                    value=d_vendor,
-                    placeholder="e.g., Home Depot, Sysco",
-                    key=vendor_key
-                )
-            with r2:
-                date_key = f"rec_date_f_{d_date}"
-                rec_date = st.date_input("Date", value=d_date_val, key=date_key)
-
-            r3, r4 = st.columns(2)
-            with r3:
-                amount_key = f"rec_amount_f_{d_vendor}_{d_amount}"
-                rec_amount = st.number_input(
-                    "Total Amount ($)",
-                    min_value=0.0, step=0.01,
-                    value=float(d_amount) if d_amount else 0.0,
-                    key=amount_key
-                )
-            with r4:
-                category_key = f"rec_category_f_{d_cat}"
-                rec_category = st.selectbox(
-                    "Category", EXPENSE_CATEGORIES,
-                    index=cat_idx, key=category_key
-                )
-
-            desc_key = f"rec_desc_f_{d_vendor}"
-            rec_desc = st.text_input(
-                "Description (optional)",
-                value=d_desc,
-                placeholder="What was this for?",
-                key=desc_key
-            )
-
-            # Action buttons
-            btn1, btn2, btn3 = st.columns([2, 1, 1])
-            with btn1:
-                save_clicked = st.button(
-                    "💾 Confirm & Save to Expenses",
-                    type="primary",
-                    use_container_width=True,
-                    key="receipt_save_btn"
-                )
-            with btn2:
-                scan_clicked = st.button(
-                    "🔍 Scan Receipt" + (" ✓" if scan_ready else ""),
-                    use_container_width=True,
-                    key="receipt_scan_btn"
-                )
-            with btn3:
-                if scan_ready:
-                    if st.button("🔄 Clear", use_container_width=True, key="receipt_clear_btn"):
-                        for k in ("_r_vendor", "_r_amount", "_r_category",
-                                  "_r_desc", "_r_date", "_r_confidence"):
-                            _s.pop(k, None)
-                        st.rerun()
-
-            # Scan handler
-            if scan_clicked:
-                if uploaded_file is None:
-                    st.warning("Please upload or capture a receipt photo first.")
-                else:
-                    with st.spinner("📷 Reading your receipt…"):
-                        result = scan_receipt_with_ai(uploaded_file)
+                with st.spinner("📷 Reading your receipt…"):
+                    result = scan_receipt_with_ai(uploaded_file)
+                    err = st.session_state.pop("_receipt_scan_error", None)
                     if result and result.get("vendor"):
                         _s["_r_vendor"] = result.get("vendor", "")
                         _s["_r_category"] = (
                             result["category"]
                             if result.get("category") in EXPENSE_CATEGORIES
-                            else EXPENSE_CATEGORIES[0]
-                        )
+                            else EXPENSE_CATEGORIES[0])
                         _s["_r_desc"] = result.get("description", "")
                         amt = result.get("amount", 0)
                         _s["_r_amount"] = float(amt) if amt else 0.0
@@ -1794,166 +1729,279 @@ def page_data_input() -> None:
                                 _s["_r_date"] = str(datetime.date.today())
                         else:
                             _s["_r_date"] = str(datetime.date.today())
-                        # Basic confidence scoring
                         _s["_r_confidence"] = {
-                            "vendor":   "high" if result.get("vendor")   else "low",
-                            "amount":   "high" if result.get("amount")   else "low",
-                            "date":     "high" if result.get("date")     else "medium",
+                            "vendor": "high" if result.get("vendor") else "low",
+                            "amount": "high" if result.get("amount") else "low",
+                            "date": "high" if result.get("date") else "medium",
                             "category": "medium",
                         }
-                        st.toast("✅ Receipt scanned! Review and confirm below.", icon="🔍")
+                        st.toast("✅ Receipt scanned! Review and confirm.",
+                                 icon="🔍")
                         st.rerun()
                     else:
-                        st.warning(
-                            "⚠️ Couldn't read this receipt clearly. "
-                            "Fill in the fields manually — it only takes a moment."
-                        )
+                        if err:
+                            st.error(f"Scan error: {err}")
+                        else:
+                            st.warning(
+                                "⚠️ Couldn't read this receipt clearly. "
+                                "Fill in the fields manually.")
 
-            # Save handler
-            if save_clicked:
-                if rec_amount <= 0:
-                    st.warning("Please enter a valid amount.")
-                else:
-                    desc_text = f"Receipt: {rec_vendor}" if rec_vendor else "Receipt"
-                    if rec_desc:
-                        desc_text += f" — {rec_desc}"
-                    row = pd.DataFrame([{
-                        "date":        str(rec_date),
-                        "category":    rec_category,
-                        "amount":      rec_amount,
-                        "description": desc_text,
-                    }])
-                    if st.session_state.df_expenses.empty:
-                        st.session_state.df_expenses = row
-                    else:
-                        st.session_state.df_expenses = pd.concat(
-                            [st.session_state.df_expenses, row], ignore_index=True)
-                    # Clear scan cache
-                    for k in ("_r_vendor", "_r_amount", "_r_category",
-                              "_r_desc", "_r_date", "_r_confidence"):
-                        _s.pop(k, None)
-                    if save_all_user_data():
-                        _compute_pnl.clear()
-                        calculate_pnl()
-                        st.toast(
-                            f"✅ Saved: {rec_vendor or 'Receipt'} — ${rec_amount:,.2f}",
-                            icon="💾"
-                        )
-                    else:
-                        st.warning("Saved to session but couldn't persist to database.")
-                    st.rerun()
-
-    # ── Manual Entry ────────────────────────────
-    st.markdown("##### Or Enter Transactions Manually")
-    tab_s, tab_p, tab_e, tab_l = st.tabs(
-        ["➕ Sale", "➕ Purchase", "➕ Expense", "➕ Labor Shift"]
-    )
-
-    with tab_s:
-        with st.form("add_sale", clear_on_submit=True):
-            r1, r2, r3 = st.columns(3)
-            s_date = r1.date_input("Date", value=datetime.date.today())
-            s_cat  = r2.text_input("Category", placeholder="Oil Change",
-                                   help="Service or product sold")
-            s_amt  = r3.number_input("Amount ($)", min_value=0.0, step=1.0)
-            s_desc = st.text_input("Description (optional)")
-            if st.form_submit_button("Add Sale", use_container_width=True, type="primary"):
-                if not s_cat.strip():
-                    st.warning("Please enter a category.")
-                else:
-                    row = pd.DataFrame([{"date": str(s_date), "category": s_cat.strip(),
-                                         "amount": s_amt, "description": s_desc}])
-                    st.session_state.df_sales = pd.concat(
-                        [st.session_state.df_sales, row], ignore_index=True)
-                    ok = save_all_user_data()
-                    if ok:
-                        _compute_pnl.clear()
-                        calculate_pnl()
-                        st.toast("Sale added ✓", icon="✅")
-                    else:
-                        st.warning("Sale added to this session but failed to save to the database. Please try again or contact support.")
-                    st.rerun()
-
-    with tab_p:
-        with st.form("add_purchase", clear_on_submit=True):
-            r1, r2, r3 = st.columns(3)
-            p_date = r1.date_input("Date", value=datetime.date.today())
-            p_cat  = r2.text_input("Category", placeholder="Parts Wholesale",
-                                   help="What you bought for resale or production")
-            p_amt  = r3.number_input("Amount ($)", min_value=0.0, step=1.0)
-            p_desc = st.text_input("Description (optional)")
-            if st.form_submit_button("Add Purchase", use_container_width=True, type="primary"):
-                if not p_cat.strip():
-                    st.warning("Please enter a category.")
-                else:
-                    row = pd.DataFrame([{"date": str(p_date), "category": p_cat.strip(),
-                                         "amount": p_amt, "description": p_desc}])
-                    st.session_state.df_purchases = pd.concat(
-                        [st.session_state.df_purchases, row], ignore_index=True)
-                    if save_all_user_data():
-                        _compute_pnl.clear()
-                        calculate_pnl()
-                        st.toast("Purchase added ✓", icon="✅")
-                    else:
-                        st.warning("Purchase added to this session but failed to save to the database. Please try again or contact support.")
-                    st.rerun()
-
-    with tab_e:
-        with st.form("add_expense", clear_on_submit=True):
-            r1, r2, r3 = st.columns(3)
-            e_date = r1.date_input("Date", value=datetime.date.today())
-            e_cat  = r2.selectbox("Category", EXPENSE_CATEGORIES,
-                                  help="Choose the closest operating expense type")
-            e_amt  = r3.number_input("Amount ($)", min_value=0.0, step=1.0)
-            e_desc = st.text_input("Description (optional)")
-            if st.form_submit_button("Add Expense", use_container_width=True, type="primary"):
-                row = pd.DataFrame([{"date": str(e_date), "category": e_cat,
-                                     "amount": e_amt, "description": e_desc}])
-                st.session_state.df_expenses = pd.concat(
-                    [st.session_state.df_expenses, row], ignore_index=True)
-                ok = save_all_user_data()
-                if ok:
+        if save_clicked:
+            if rec_amount <= 0:
+                st.warning("Please enter a valid amount.")
+            else:
+                desc_text = (f"Receipt: {rec_vendor}"
+                              if rec_vendor else "Receipt")
+                if rec_desc:
+                    desc_text += f" — {rec_desc}"
+                row = pd.DataFrame([{
+                    "date": str(rec_date),
+                    "category": rec_category,
+                    "amount": rec_amount,
+                    "description": desc_text,
+                }])
+                st.session_state.df_expenses = (
+                    row if st.session_state.df_expenses.empty
+                    else pd.concat([st.session_state.df_expenses, row],
+                                   ignore_index=True))
+                for k in ("_r_vendor","_r_amount","_r_category",
+                          "_r_desc","_r_date","_r_confidence"):
+                    _s.pop(k, None)
+                if save_all_user_data():
                     _compute_pnl.clear()
                     calculate_pnl()
-                    st.toast("Expense added ✓", icon="✅")
+                    st.toast(
+                        f"✅ Saved: {rec_vendor or 'Receipt'} "
+                        f"— ${rec_amount:,.2f}", icon="💾")
                 else:
-                    st.warning("Expense added to this session but failed to save to the database. Please try again or contact support.")
+                    st.warning("Saved to session but couldn't "
+                               "persist to database.")
                 st.rerun()
 
-    with tab_l:
-        with st.form("add_labor", clear_on_submit=True):
-            r1, r2, r3, r4 = st.columns(4)
-            l_date = r1.date_input("Date", value=datetime.date.today())
-            l_emp  = r2.text_input("Employee", placeholder="Name")
-            l_hrs  = r3.number_input(
-                "Hours", min_value=0.0, step=0.5, value=8.0,
-                help=f"Shifts over {BENCHMARKS['overtime_threshold_hours']}h flagged as overtime",
-            )
-            l_rate = r4.number_input("Rate $/hr", min_value=0.0, step=0.5, value=20.0)
-            l_desc = st.text_input("Description", placeholder="Regular shift")
-            if st.form_submit_button("Add Shift", use_container_width=True, type="primary"):
-                if not l_emp.strip():
-                    st.warning("Please enter an employee name.")
-                else:
-                    row = pd.DataFrame([{"date": str(l_date), "employee": l_emp.strip(),
-                                         "hours": l_hrs, "rate": l_rate, "description": l_desc}])
-                    st.session_state.df_labor = pd.concat(
-                        [st.session_state.df_labor, row], ignore_index=True)
+    # ════════════════════════════════════════════════════════════
+    # TAB 2 — UPLOAD CSV
+    # ════════════════════════════════════════════════════════════
+    with tab_csv:
+        st.markdown("##### Upload your data as CSV files")
+
+        with st.expander("📖 CSV format guide", expanded=False):
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**Sales · Purchases · Expenses**")
+                st.code(
+                    "date,category,amount,description\n"
+                    "2026-01-15,Oil Change,150.00,Maintenance\n"
+                    "2026-01-20,Inspection,50.00,State inspection",
+                    language="text")
+            with c2:
+                st.markdown("**Labor / Payroll**")
+                st.code(
+                    "date,employee,hours,rate,description\n"
+                    "2026-01-15,Mike,8,25.00,Regular shift\n"
+                    "2026-01-18,Mike,10,37.50,OT shift",
+                    language="text")
+
+        upload_specs = [
+            ("up_sales", "df_sales",
+             ["date","category","amount"], "Sales"),
+            ("up_purch", "df_purchases",
+             ["date","category","amount"], "Purchases"),
+            ("up_exp", "df_expenses",
+             ["date","category","amount"], "Expenses"),
+            ("up_labor", "df_labor",
+             ["date","employee","hours","rate"], "Labor"),
+        ]
+        cols = st.columns(4)
+        for col, (key, state_key, required_cols, label) in zip(
+                cols, upload_specs):
+            with col:
+                f = st.file_uploader(label, type="csv", key=key)
+                if f:
+                    parsed = parse_csv(f, required_cols, label)
+                    if not parsed.empty:
+                        st.session_state[state_key] = parsed
+                        saved_ok = save_all_user_data()
+                        _compute_pnl.clear()
+                        calculate_pnl()
+                        if saved_ok:
+                            st.toast(
+                                f"{label}: {len(parsed):,} rows loaded",
+                                icon="📂")
+                        else:
+                            st.warning(
+                                f"⚠️ {label} loaded but failed to "
+                                f"persist. Will show in this session.")
+
+        st.markdown("<div style='height:1rem'></div>",
+                    unsafe_allow_html=True)
+
+        biz = st.session_state.business_type or "Auto Repair"
+        with st.expander("⚡ Load demo data", expanded=False):
+            st.caption(
+                f"Replace all current data with 6 months of "
+                f"realistic {biz} demo data.")
+            if st.button(f"Load {biz} Demo Data",
+                          use_container_width=True):
+                with st.spinner("Generating demo data…"):
+                    demo = generate_demo_data(6, biz)
+                    st.session_state.df_sales = demo["sales"]
+                    st.session_state.df_purchases = demo["purchases"]
+                    st.session_state.df_expenses = demo["expenses"]
+                    st.session_state.df_labor = demo["labor"]
+                    save_all_user_data()
+                    _compute_pnl.clear()
+                    calculate_pnl()
+                    st.toast("Demo data loaded!", icon="✅")
+                    st.rerun()
+
+    # ════════════════════════════════════════════════════════════
+    # TAB 3 — MANUAL ENTRY
+    # ════════════════════════════════════════════════════════════
+    with tab_manual:
+        st.markdown("##### Enter transactions manually")
+
+        tab_s, tab_p, tab_e, tab_l = st.tabs([
+            "➕ Sale", "➕ Purchase",
+            "➕ Expense", "➕ Labor Shift"
+        ])
+
+        with tab_s:
+            with st.form("add_sale", clear_on_submit=True):
+                r1, r2, r3 = st.columns(3)
+                s_date = r1.date_input("Date",
+                                       value=datetime.date.today())
+                s_cat = r2.text_input("Category",
+                                      placeholder="Oil Change")
+                s_amt = r3.number_input("Amount ($)",
+                                         min_value=0.0, step=1.0)
+                s_desc = st.text_input("Description (optional)")
+                if st.form_submit_button("Add Sale",
+                                         use_container_width=True, type="primary"):
+                    if not s_cat.strip():
+                        st.warning("Please enter a category.")
+                    else:
+                        row = pd.DataFrame([{
+                            "date": str(s_date),
+                            "category": s_cat.strip(),
+                            "amount": s_amt,
+                            "description": s_desc
+                        }])
+                        st.session_state.df_sales = pd.concat(
+                            [st.session_state.df_sales, row],
+                            ignore_index=True)
+                        if save_all_user_data():
+                            _compute_pnl.clear()
+                            calculate_pnl()
+                            st.toast("Sale added ✓", icon="✅")
+                        else:
+                            st.warning(
+                                "Sale added to session but failed "
+                                "to save to the database.")
+                        st.rerun()
+
+        with tab_p:
+            with st.form("add_purchase", clear_on_submit=True):
+                r1, r2, r3 = st.columns(3)
+                p_date = r1.date_input("Date",
+                                        value=datetime.date.today())
+                p_cat = r2.text_input("Category",
+                                      placeholder="Parts Wholesale")
+                p_amt = r3.number_input("Amount ($)",
+                                         min_value=0.0, step=1.0)
+                p_desc = st.text_input("Description (optional)")
+                if st.form_submit_button("Add Purchase",
+                                         use_container_width=True, type="primary"):
+                    if not p_cat.strip():
+                        st.warning("Please enter a category.")
+                    else:
+                        row = pd.DataFrame([{
+                            "date": str(p_date),
+                            "category": p_cat.strip(),
+                            "amount": p_amt,
+                            "description": p_desc
+                        }])
+                        st.session_state.df_purchases = pd.concat(
+                            [st.session_state.df_purchases, row],
+                            ignore_index=True)
+                        if save_all_user_data():
+                            _compute_pnl.clear()
+                            calculate_pnl()
+                            st.toast("Purchase added ✓", icon="✅")
+                        else:
+                            st.warning(
+                                "Purchase added to session but "
+                                "failed to save to the database.")
+                        st.rerun()
+
+        with tab_e:
+            with st.form("add_expense", clear_on_submit=True):
+                r1, r2, r3 = st.columns(3)
+                e_date = r1.date_input("Date",
+                                       value=datetime.date.today())
+                e_cat = r2.selectbox("Category", EXPENSE_CATEGORIES)
+                e_amt = r3.number_input("Amount ($)",
+                                          min_value=0.0, step=1.0)
+                e_desc = st.text_input("Description (optional)")
+                if st.form_submit_button("Add Expense",
+                                         use_container_width=True, type="primary"):
+                    row = pd.DataFrame([{
+                        "date": str(e_date),
+                        "category": e_cat,
+                        "amount": e_amt,
+                        "description": e_desc
+                    }])
+                    st.session_state.df_expenses = pd.concat(
+                        [st.session_state.df_expenses, row],
+                        ignore_index=True)
                     if save_all_user_data():
                         _compute_pnl.clear()
                         calculate_pnl()
-                        st.toast("Shift added ✓", icon="✅")
+                        st.toast("Expense added ✓", icon="✅")
                     else:
-                        st.warning("Shift added to this session but failed to save to the database. Please try again or contact support.")
+                        st.warning(
+                            "Expense added to session but failed "
+                            "to save to the database.")
                     st.rerun()
 
-    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Sales rows",    f"{len(st.session_state.df_sales):,}")
-    m2.metric("Purchase rows", f"{len(st.session_state.df_purchases):,}")
-    m3.metric("Expense rows",  f"{len(st.session_state.df_expenses):,}")
-    m4.metric("Labor rows",    f"{len(st.session_state.df_labor):,}")
-
+        with tab_l:
+            with st.form("add_labor", clear_on_submit=True):
+                r1, r2, r3, r4 = st.columns(4)
+                l_date = r1.date_input("Date",
+                                        value=datetime.date.today())
+                l_emp = r2.text_input("Employee",
+                                      placeholder="Name")
+                l_hrs = r3.number_input("Hours",
+                                         min_value=0.0,
+                                         step=0.5, value=8.0)
+                l_rate = r4.number_input("Rate $/hr",
+                                          min_value=0.0,
+                                          step=0.5, value=20.0)
+                l_desc = st.text_input("Description",
+                                      placeholder="Regular shift")
+                if st.form_submit_button("Add Shift",
+                                         use_container_width=True, type="primary"):
+                    if not l_emp.strip():
+                        st.warning("Please enter an employee name.")
+                    else:
+                        row = pd.DataFrame([{
+                            "date": str(l_date),
+                            "employee": l_emp.strip(),
+                            "hours": l_hrs,
+                            "rate": l_rate,
+                            "description": l_desc
+                        }])
+                        st.session_state.df_labor = pd.concat(
+                            [st.session_state.df_labor, row],
+                            ignore_index=True)
+                        if save_all_user_data():
+                            _compute_pnl.clear()
+                            calculate_pnl()
+                            st.toast("Shift added ✓", icon="✅")
+                        else:
+                            st.warning(
+                                "Shift added to session but failed "
+                                "to save to the database.")
+                        st.rerun()
 
 # ────────────────────────────────────────────────
 # PAGE: DASHBOARD
@@ -2289,27 +2337,20 @@ def render_smart_insights(pnl: dict) -> None:
 
 
 def render_tax_deadlines(tax: dict) -> None:
-    """Render TaxShield Deadlines panel using st components."""
+    """Render TaxShield Deadlines panel."""
     import datetime as dt
     today = dt.date.today()
 
-    st.markdown("""
-    <div class="panel-container">
-    <div class="panel-header">
-    <span class="panel-title">TaxShield deadlines</span>
-    </div>
-    """, unsafe_allow_html=True)
-
     schedule = tax.get("sales_tax", {}).get("schedule", []) if tax else []
+    county = tax.get("sales_tax", {}).get("county", "FL") if tax else "FL"
+    corp_tax = tax.get("corporate_tax", {}) if tax else {}
+
+    # Build all inner HTML first
+    inner_html = ""
 
     if not schedule:
-        st.markdown(
-            '<div class="insight-desc">Add revenue data to '
-            'calculate filing deadlines.</div>',
-            unsafe_allow_html=True
-        )
+        inner_html = '<div class="insight-desc">Add revenue data to calculate filing deadlines.</div>'
     else:
-        county = tax.get("sales_tax", {}).get("county", "FL")
         for deadline in schedule[:2]:
             due_str = deadline.get("due_window", "")
             try:
@@ -2327,35 +2368,41 @@ def render_tax_deadlines(tax: dict) -> None:
                 badge_cls = "pp-badge-insight"
                 badge_txt = "Soon"
 
-            st.markdown(f"""
-            <div class="deadline-item">
-            <div style="display:flex;justify-content:space-between;
-            align-items:flex-start;">
-            <div>
-            <div class="deadline-title">Sales tax remittance</div>
-            <div class="deadline-sub">{county} &middot; Due {due_str}</div>
-            </div>
-            <span class="pp-badge {badge_cls}">{badge_txt}</span>
-            </div>
-            </div>
-            """, unsafe_allow_html=True)
+            inner_html += (
+                f'<div class="deadline-item">'
+                f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                f'<div>'
+                f'<div class="deadline-title">Sales tax remittance</div>'
+                f'<div class="deadline-sub">{county} &middot; Due {due_str}</div>'
+                f'</div>'
+                f'<span class="pp-badge {badge_cls}">{badge_txt}</span>'
+                f'</div>'
+                f'</div>'
+            )
 
-        corp_tax = tax.get("corporate_tax", {})
         if corp_tax.get("annual_corporate_tax", 0) > 0:
-            st.markdown("""
-            <div class="deadline-item">
-            <div style="display:flex;justify-content:space-between;
-            align-items:flex-start;">
-            <div>
-            <div class="deadline-title">Quarterly estimate</div>
-            <div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>
-            </div>
-            <span class="pp-badge pp-badge-review">Q2</span>
-            </div>
-            </div>
-            """, unsafe_allow_html=True)
+            inner_html += (
+                '<div class="deadline-item">'
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                '<div>'
+                '<div class="deadline-title">Quarterly estimate</div>'
+                '<div class="deadline-sub">Corporate tax &middot; Due Apr 30</div>'
+                '</div>'
+                '<span class="pp-badge pp-badge-review">Q2</span>'
+                '</div>'
+                '</div>'
+            )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Render everything in ONE st.markdown() call
+    st.markdown(
+        f'<div class="panel-container">'
+        f'<div class="panel-header">'
+        f'<span class="panel-title">TaxShield deadlines</span>'
+        f'</div>'
+        f'{inner_html}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
 
 def page_overview() -> None:
@@ -3065,117 +3112,136 @@ def page_export() -> None:
 # SIDEBAR (extracted from main for clarity)
 # ────────────────────────────────────────────────
 def render_sidebar() -> str:
-    """Render sidebar nav + AI Pulse. Returns selected page name."""
+    """Render sidebar navigation. Returns selected page name."""
     with st.sidebar:
+        # ── Logo + user info ─────────────────────
         st.markdown("""
-        <div style="text-align:center; padding:1rem 0 0.5rem;">
-            <span style="font-size:1.6rem; color:#e0e0e0;">◈</span>
-            <p style="font-size:1.1rem;font-weight:600;color:#e0e0e0;margin:0.3rem 0 0;">
-                ProfitPulse
-            </p>
+        <div class="sidebar-logo">
+        <span style="font-size:1.8rem; color:#e0e0e0;">◈</span>
+        <p style="font-size:1.1rem; font-weight:700;
+        color:#F1F5F9; margin:0.3rem 0 0;">
+        ProfitPulse
+        </p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.caption(f"Signed in as **{st.session_state.username}**")
-        if st.session_state.business_type:
-            st.caption(f"Business: **{st.session_state.business_type}**")
-        st.caption(f"Plan: **{current_plan_label()}**")
-
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-
-        nav_options = ["Overview", "Analytics", "TaxShield", "Data Input", "AI Advisor", "Billing", "Settings", "Export"]
-
-        # AI Advisor is only for Starter/Complete/Demo users
-        if st.session_state.user_tier not in {"starter", "complete", "demo"}:
-            nav_options.remove("AI Advisor")
-
-        # Honor pending nav from jump_to() FIRST — before selectbox runs.
-        # This must come before the selectbox so nav_page is set correctly.
-        pending = st.session_state.pop("_pending_nav", None)
-        if pending and pending in nav_options:
-            st.session_state.nav_page = pending
-        
-        default_page = st.session_state.get("nav_page", "Overview")
-        if default_page not in nav_options:
-            default_page = "Overview"
-
-        # Build format func dict once
-        nav_labels = {
-            "Overview":   "🏠  Overview",
-            "Analytics":  "📊  Analytics",
-            "TaxShield":  "🧾  TaxShield",
-            "Data Input": "📁  Data Input",
-            "AI Advisor": "🤖  AI Advisor",
-            "Billing":    "◈  Billing",
-            "Settings":   "⚙️  Settings",
-            "Export":     "📤  Export",
-        }
-        
-        # Use a selectbox instead of radio for more reliable state handling
-        page = st.selectbox(
-            "Navigation",
-            nav_options,
-            index=nav_options.index(default_page),
-            format_func=lambda x: nav_labels.get(x, x),
-            key="nav_select",
-            label_visibility="collapsed"
+        username = st.session_state.get("username", "")
+        plan = current_plan_label()
+        st.markdown(
+            f'<div class="sidebar-user">'
+            f'{username} &middot; {plan}'
+            f'</div>',
+            unsafe_allow_html=True
         )
-        
-        # Sync nav_page — ONLY if the user actually changed the selectbox.
-        # Prevents pending nav from being stomped if user also clicks a selectbox option.
-        if page != st.session_state.get("nav_page", ""):
-            st.session_state.nav_page = page
-        # ── AI Pulse ────────────────────────────
-        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-        with st.expander("🤖 AI Pulse", expanded=True):
-            st.caption("Dynamic insight based on your current numbers")
-            if st.button("Generate Insight", use_container_width=True):
+
+        if st.session_state.business_type:
+            st.markdown(
+                f'<div style="text-align:center; font-size:11px; '
+                f'color:#475569; padding-bottom:0.75rem;">'
+                f'{st.session_state.business_type}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── Navigation ───────────────────────────
+        pending = st.session_state.pop("_pending_nav", None)
+        if pending:
+            st.session_state.nav_page = pending
+
+        current_page = st.session_state.get("nav_page", "Overview")
+
+        nav_items = [
+            ("Overview",   "🏠", True),
+            ("Analytics",  "📊", True),
+            ("TaxShield",  "🧾", True),
+            ("Data Input", "📁", True),
+            ("AI Advisor", "🤖",
+             st.session_state.user_tier in {"starter","complete","demo"}),
+        ]
+
+        for page, icon, visible in nav_items:
+            if not visible:
+                continue
+            is_active = current_page == page
+            if st.button(
+                    f"{icon} {page}",
+                    key=f"nav_{page}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+            ):
+                st.session_state.nav_page = page
+                if "nav_select" in st.session_state:
+                    del st.session_state["nav_select"]
+                st.rerun()
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── Secondary nav ────────────────────────
+        secondary_items = [
+            ("Billing",  "💳"),
+            ("Settings", "⚙️"),
+            ("Export",   "📤"),
+        ]
+        for page, icon in secondary_items:
+            if st.button(
+                    f"{icon} {page}",
+                    key=f"nav_{page}",
+                    use_container_width=True,
+            ):
+                st.session_state.nav_page = page
+                st.rerun()
+
+        st.markdown('<hr class="nav-divider">', unsafe_allow_html=True)
+
+        # ── AI Pulse (collapsed by default) ─────
+        with st.expander("🤖 AI Pulse", expanded=False):
+            st.caption("Dynamic insight from your numbers")
+            if st.button("Generate Insight",
+                         use_container_width=True,
+                         key="sidebar_ai_pulse"):
                 if st.session_state.df_sales.empty:
-                    st.warning("Load data first so the AI can give meaningful advice.")
+                    st.warning("Load data first.")
                 else:
                     if not st.session_state.pnl_cache:
                         calculate_pnl()
                     with st.spinner("Analysing…"):
                         insight = call_ai(_ai_pulse_prompt())
                     st.markdown(insight)
-            # Static fallback tip when no AI call made yet
             if not st.session_state.pnl_cache:
-                st.info("💡 **Tip:** Track every expense category separately — "
-                        "vague 'Misc' entries hide your biggest cost leaks.")
-
-        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+                st.info("💡 Track every expense category "
+                        "separately — vague 'Misc' entries "
+                        "hide your biggest cost leaks.")
 
         # ── Data status ──────────────────────────
-        has_data = not st.session_state.df_sales.empty
-        if has_data:
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+        if not st.session_state.df_sales.empty:
             total_rows = sum(
                 len(st.session_state[k])
-                for k in ["df_sales", "df_purchases", "df_expenses", "df_labor"]
+                for k in ["df_sales","df_purchases",
+                          "df_expenses","df_labor"]
             )
             st.caption(f"✓ {total_rows:,} records loaded")
             if st.session_state.last_calculated:
-                st.caption(f"P&L last run: {st.session_state.last_calculated}")
+                st.caption(
+                    f"P&L: {st.session_state.last_calculated}")
         else:
             st.caption("No data loaded")
 
-        if st.button("🚪 Sign out", use_container_width=True):
+        st.markdown("<div style='height:0.5rem'></div>",
+                    unsafe_allow_html=True)
+
+        # ── Sign out ─────────────────────────────
+        if st.button("🚪 Sign out", use_container_width=True,
+                     key="sidebar_signout"):
             logout()
 
         st.markdown("---")
-    return page
 
+        return st.session_state.get("nav_page", "Overview")
 
-# ────────────────────────────────────────────────
-# MAIN ROUTER
-# ────────────────────────────────────────────────
-def main() -> None:
-    # Global error handler
-    try:
-        _main_impl()
-    except Exception as e:
-        st.error(f"⚠️ An error occurred: {str(e)}")
-        st.info("Try refreshing the page. If the problem persists, your session may have expired.")
-        st.button("↻ Reload", on_click=lambda: st.rerun())
 
 def _main_impl() -> None:
     # Apply theme early

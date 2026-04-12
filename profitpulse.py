@@ -817,6 +817,7 @@ def login_page() -> None:
 
             # Handle AFTER form block — safe from Streamlit form rerun issues
             if submitted:
+                user = user.lower().strip()
                 # First check demo credentials
                 valid_user = os.getenv("APP_USER", DEMO_USER)
                 valid_pass = os.getenv("APP_PASS", DEMO_PASS)
