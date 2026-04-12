@@ -2036,6 +2036,21 @@ def page_dashboard() -> None:
 
     pnl = calculate_pnl()
 
+    # ── AI Period Summary Button ─────────────────
+    if st.button("🤖 AI Period Summary", type="secondary", use_container_width=True):
+        with st.spinner("Analyzing your period..."):
+            benchmarks = calc_benchmarks(pnl)
+            prompt = f"""You are a business analyst. Based on this P&L data: Revenue ${pnl['total_revenue']:.2f}, 
+            OpEx ${pnl['total_opex']:.2f}, Gross Profit ${pnl['gross_profit']:.2f}, Net Margin {pnl['net_margin_pct']:.1f}%.
+            Industry benchmarks: Gross Margin {benchmarks['gross_margin']:.0f}%, Net Margin {benchmarks['net_margin']:.0f}%.
+            Labor % of Revenue: {pnl['labor_pct_of_revenue']:.1f}%.
+            Write a 3-4 sentence plain-English summary: what's going well, what's concerning, and 1-2 specific suggestions."""
+            response = call_ai(prompt)
+            st.markdown("### 📋 AI Period Summary")
+            st.markdown(response)
+            st.caption("AI summaries are informational. Not financial advice.")
+
+
     # ── Natural Language Summary ─────────────────
     if pnl["total_revenue"] > 0:
         st.markdown("### 💡 Business Snapshot")
@@ -2523,6 +2538,30 @@ def page_overview() -> None:
                 <div class="hero-value">—</div>
                 <div class="hero-sub">Add data to calculate</div>
             </div>""", unsafe_allow_html=True)
+
+
+        # ── Quick Sale Button ─────────────────────
+        if st.button("➕ Quick Sale", use_container_width=True):
+            st.session_state.nav_page = "Data Input"
+            st.session_state._data_input_tab = "sales"
+            st.rerun()
+
+        # ── Period Comparison (This Month vs Last Month) ─
+        import datetime as dt
+        sales = st.session_state.df_sales.copy()
+        sales['date'] = pd.to_datetime(sales['date'])
+        now = dt.datetime.now()
+        this_month = sales[sales['date'].dt.month == now.month]
+        last_month_df = sales[sales['date'].dt.month == ((now.month - 1) % 12 or 12)]
+        rev_this = this_month['amount'].sum() if not this_month.empty else 0
+        rev_last = last_month_df['amount'].sum() if not last_month_df.empty else 0
+        mom = ((rev_this - rev_last) / rev_last * 100) if rev_last > 0 else 0
+        pc1, pc2 = st.columns(2)
+        with pc1:
+            st.metric("This Month", f"${rev_this:,.0f}", 
+                      f"{mom:+.1f}% vs last month" if rev_last > 0 else "No prior data")
+        with pc2:
+            st.metric("Last Month", f"${rev_last:,.0f}")
 
         # ── Revenue Trend Chart ──────────────────
         st.markdown("<div style='height:0.5rem'></div>",
