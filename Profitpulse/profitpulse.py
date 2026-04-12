@@ -838,7 +838,7 @@ def login_page() -> None:
                         db_username = user_data.get("username", user)
                         st.session_state.username = db_username
                         # New signups default to starter; paid users get their actual tier from billing
-                        st.session_state.user_tier = user_data.get("tier") or "starter"
+                        st.session_state.user_tier = user_data.get("tier") or "beta"
                         # Load user's saved data using their USERNAME (not email)
                         # so the per-user table names match what save_user_data uses
                         st.session_state.df_sales     = users.load_user_data(db_username, "sales")
