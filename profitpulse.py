@@ -686,6 +686,7 @@ PLAN_LABELS = {
     "pro": "ProfitPulse Complete",
     "complete": "ProfitPulse Complete",
     "demo": "ProfitPulse Complete (Demo)",
+    "beta": "ProfitPulse Beta 🚀",
 }
 
 
@@ -700,7 +701,7 @@ BUSINESS_TYPE_TO_TAX = {
 
 
 def has_complete_access() -> bool:
-    return st.session_state.user_tier in {"pro", "complete", "demo"}
+    return st.session_state.user_tier in {"pro", "complete", "demo", "beta"}
 
 
 def current_plan_label() -> str:
@@ -2431,6 +2432,17 @@ def page_overview() -> None:
         if st.session_state.last_calculated:
             st.caption(f"Updated: **{st.session_state.last_calculated}**")
 
+    if st.session_state.user_tier == "beta":
+        st.markdown("""
+        <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15) 0%,rgba(59,130,246,0.10) 100%);border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:14px 20px;margin-bottom:1rem;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.4rem;">🚀</span>
+        <div>
+        <div style="font-weight:700;color:#A5B4FC;font-size:13px;">Beta Access — Full Features Unlocked</div>
+        <div style="color:#64748B;font-size:12px;margin-top:2px;">You have complete access to all ProfitPulse features. Thank you for testing!</div>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # ── Main layout: left (charts) + right (panels) ─
     left_col, right_col = st.columns([2, 1], gap="large")
 
@@ -2618,7 +2630,7 @@ def page_taxshield() -> None:
         with ts3: st.metric("County Rate", f"{tax['sales_tax']['tax_rate']*100:.2f}%")
         st.markdown("---")
 
-    if not complete:
+    if not complete and st.session_state.user_tier != "beta":
         user_tier = st.session_state.get("user_tier", "free")
         is_free = user_tier in {"free", "demo"}
 
@@ -2852,7 +2864,7 @@ def page_settings() -> None:
 # PAGE: AI ADVISOR
 # ────────────────────────────────────────────────
 def page_ai_chat() -> None:
-    if st.session_state.user_tier not in {"starter", "complete", "demo"}:
+    if st.session_state.user_tier not in {"starter", "complete", "demo", "beta"}:
         st.error("AI Advisor is available on Starter and Complete plans.")
         if st.button("← Back to Overview"):
             jump_to("Overview")
